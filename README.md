@@ -1,150 +1,125 @@
-# ⚡ BESS PTF Arbitraj Optimizasyonu ve Fizibilite Dashboard'u
+# BESS Standalone Arbitrage Optimization
 
-> **EPİAŞ Gün Öncesi Piyasası (GÖP) Gerçek Saatlik Piyasa Takas Fiyatı (PTF) Verileriyle Batarya Enerji Depolama Sistemleri (BESS) 1C Arbitraj Simülasyonu, Yıpranma Analizi ve Karar Destek Platformu.**
+EPİAŞ Gün Öncesi Piyasası (GÖP) saatlik Piyasa Takas Fiyatı (PTF) verilerini kullanarak şebeke ölçeğindeki Batarya Enerji Depolama Sistemleri (BESS) için 1C arbitraj simülasyonu, yıpranma maliyeti hesabı ve ekonomik fizibilite analizi sunan analitik bir modeldir.
 
----
-
-## 📌 Proje Genel Bakışı
-
-Bu proje; Türkiye elektrik piyasasında (EPİAŞ GÖP) 2024 ve 2025 yıllarına ait **8.784** ve **8.760** saatlik gerçek PTF verilerini kullanarak, şebeke ölçeğinde Batarya Enerji Depolama Sistemlerinin (BESS) arbitraj potansiyelini simüle eden ve fizibilite analizini gerçekleştiren interaktif bir analitik platformdur.
-
-Batarya yatırımı yapacak enerji yatırımcıları, portföy yöneticileri ve analistler için tasarlanmış olup; **parçalı ve gerçek dışı alım-satımları engelleyen**, günde en kârlı tekil dip saatte şarj ve akşam pikinde deşarj yapan **1C Blok Arbitraj Stratejisi** ile çalışır.
+Model, 2024 (artık yıl, 8.784 saat) ve 2025 (8.760 saat) gerçekleşen piyasa takas fiyatları üzerinde çalışır.
 
 ---
 
-## ✨ Temel Özellikler
+## Model Yaklaşımı ve Metodoloji
 
-1. **🔋 Esnek Batarya Parametreleri (Sol Panel):**
-   - **Nominal Güç:** 0.5 MW ile 150.0 MW arasında serbest seçim.
-   - **Depolama Kapasitesi:** 1C konfigürasyonunda otomatik hesaplama (Örn: 10 MW ➔ 10 MWh).
-   - **Çevrim Verimliliği (Round-Trip Efficiency - RTE):** %70 ile %98 arasında ayarlanabilir.
-   - **İşletmeci SoC Yönetimi:** Güne Başlangıç SoC (%) ve Gün Sonu Hedef SoC (%) sınırlandırması.
+Geleneksel lineer programlama modelleri, sürekli değişken kısıtları nedeniyle bataryayı gün içine yayılmış mikro dilimlerle (örn. 0.1 MW) şarj/deşarj etme eğilimindedir. Bu durum pratikte batarya hücre ömrü ve invertör yönetimi açısından uygulanabilir değildir.
 
-2. **🛠️ Yıpranma Maliyeti & Sermaye Koruma (Pas Geçme / Idle Mekanizması):**
-   - Kullanıcı tarafından serbestçe girilebilen döngü başı **Yıpranma Maliyeti ($/MWh)** parametresi.
-   - Eğer gün içi PTF fiyat makası (spread), verimlilik kaybını ve yıpranma maliyetini karşılamıyorsa (**Net Kâr $\le$ $0.00$**), batarya o gün kesinlikle çalıştırılmaz (**Pas Geçilir: 0 MW, 0 Cycle, $0 Maliyet, $0 Kâr**).
-   - Yıllık ve aylık toplamlar negatif kârlı günlerden tamamen arındırılır.
+Bu çalışmada uygulanan yöntem:
+- **1C Blok Arbitraj Stratejisi:** Günlük 24 saatlik fiyat eğrisinde şarjın deşarjdan önce gerçekleşmesi ($ch < dis$) koşuluyla en yüksek net marjı veren tekil şarj ve tekil deşarj saat çiftini analitik olarak belirler.
+- **İşletmeci SoC Yönetimi:** Başlangıç ($\text{SoC}_{\text{start}}$) ve hedef bitiş ($\text{SoC}_{\text{end}}$) doluluk sınırları kullanıcı tarafından belirlenir; şarj dip saatte bataryayı tam kapasiteye ulaştırırken, deşarj bataryayı hedef bitiş seviyesine indirir.
+- **Yıpranma Maliyeti ve Pas Geçme Kuralı:** Döngü başına hücre amortisman maliyeti ($/MWh) hesaba katılır. Fiyat makası verimlilik kaybı ve yıpranma maliyetini karşılamıyorsa ($\text{Net Kâr} \le 0$), batarya o gün çalıştırılmaz (idle; 0 döngü, $0 maliyet, $0 kâr).
 
-3. **📈 4 Dinamik Analiz Sekmesi:**
-   - **1. Günlük Arbitraj Detayı:**
-     - 4'lü interaktif tarih seçim kartları (📌 Gün, 📆 Ay, 🗓️ Yıl) ve senkronize 📅 Takvim Kartı.
-     - 24 saatlik PTF eğrisi, tekil şarj ve deşarj noktaları ve saatlik batarya doluluk (SoC %) grafiği.
-     - Accordion içinde 24 saatin tamamını gösteren renklendirilmiş detay tablosu (🔵 Mavi: Şarj saati, 🟢 Yeşil: Deşarj saati).
-   - **2. Aylık ve Yıllık Kırılım & 365 Günlük Excel İndirme:**
-     - Tek satırda 3 kompakt piyasa ve finans grafiği:
-       1. *Aylık Net Kâr ($) ve Yapılan Cycle Sayısı*
-       2. *Aylık Cycle Başına Net Kâr ($/Cycle)*
-       3. *Aylık Ortalama PTF ($/MWh) ve Günlük Fiyat Makası (Spread) Dinamikleri (Çift Eksenli)*
-     - **365 Günlük Detaylı Excel (.xlsx) Raporu:** Sol paneldeki tüm kısıtlara göre anlık üretilen, 5 sayfalı kurumsal Excel dosyası (Özet, Aylık Kırılım, 365 Günlük Özet, 8760 Saatlik Detay, 2024 vs 2025 Kıyaslama).
-   - **3. 2024 vs 2025 Kıyaslama:**
-     - Aynı batarya konfigürasyonu ile 2024 ve 2025 PTF spread dinamiklerinin arbitraj kârlılığına etkisini yan yana kıyaslayan metrikler, karşılaştırma tablosu ve aylık kâr grafiği.
-   - **4. LinkedIn Fizibilite Kartı:**
-     - Tek tıkla kopyalanabilir, profesyonel formatta hazırlanmış sosyal medya / yatırımcı özeti metni.
+### Matematiksel Formülasyon
+
+1. **Kapasite ve Enerji Hacimleri:**
+   $$E_{\max} = \frac{P_{\text{nominal}}}{\text{C-Rate}} \quad (\text{MWh})$$
+   $$\Delta E_{\text{ch}} = \max\left(0, E_{\max} - \frac{\text{SoC}_{\text{start}}}{100} E_{\max}\right)$$
+   $$\Delta E_{\text{dis, storage}} = \max\left(0, E_{\max} - \frac{\text{SoC}_{\text{end}}}{100} E_{\max}\right)$$
+   $$\Delta E_{\text{dis, grid}} = \Delta E_{\text{dis, storage}} \times \text{RTE}$$
+
+2. **Ekonomik Karar Fonksiyonu:**
+   $$\text{Brüt Kâr} = (\Delta E_{\text{dis, grid}} \times \text{PTF}_{\text{dis}}) - (\Delta E_{\text{ch}} \times \text{PTF}_{\text{ch}})$$
+   $$\text{Yıpranma Maliyeti} = C_{\text{deg}} \times \Delta E_{\text{dis, storage}}$$
+   $$\text{Net Kâr} = \text{Brüt Kâr} - \text{Yıpranma Maliyeti}$$
+
+   $$\text{Eğer } \max_{ch < dis} \text{Net Kâr} \le 0 \implies \text{Operasyon Pas Geçilir (Standby)}$$
 
 ---
 
-## 📂 Proje Dizin Yapısı
+## Temel Fonksiyonlar
+
+- **Parametre Yönetimi:** 0.5 - 150 MW nominal güç aralığı, %70 - %98 çevrim verimliliği (RTE), serbest başlangıç/bitiş SoC ve birim yıpranma maliyeti girişi.
+- **Günlük Detay Analizi:** 24 saatlik PTF eğrisi, tekil şarj/deşarj noktaları, saatlik SoC profili ve renklendirilmiş saatlik işlem dökümü.
+- **Aylık Kırılım ve Piyasa Dinamikleri:** Aylık net kâr, döngü sayısı, döngü başı birim kâr ile aylık ortalama PTF ve günlük PTF spread grafiklerinin çift eksenli analizi.
+- **Çok Sayfalı Excel Raporlama:** Seçilen parametrelerle anlık üretilen 5 sayfalı Excel raporu (Parametreler, Aylık Kırılım, 365 Günlük Özet, 8.760 Saatlik Detay, 2024 vs 2025 Kıyaslama).
+- **Yıllık Karşılaştırma:** Aynı sistem konfigürasyonunun 2024 ve 2025 piyasa koşullarındaki karşılaştırmalı performans analizi.
+
+---
+
+## Proje Yapısı
 
 ```plaintext
-├── data/                      # EPİAŞ Saatlik PTF Veri Dosyaları
-│   ├── PTF2024.csv            # 2024 PTF verisi (8,784 satır - Artık Yıl)
-│   └── PTF2025.csv            # 2025 PTF verisi (8,760 satır)
-├── src/                       # Çekirdek Python Modülleri
-│   ├── __init__.py
-│   ├── data_loader.py         # PTF veri okuma, temizleme ve önbellekleme
-│   ├── optimizer.py           # 1C Arbitraj, SoC ve Pas Geçme optimizasyon motoru
-│   ├── metrics.py             # Finansal KPI, döngü istatistikleri ve aylık toplayıcı
-│   └── exporter.py            # Çok sayfalı profesyonel Excel raporu üreticisi
-├── tests/                     # Test Paketleri
-│   ├── test_optimizer.py      # Optimizasyon motoru ve yıpranma birim testleri
-│   └── test_e2e.py            # Uçtan uca veri, sınır durumları ve Excel doğrulama testleri
-├── app.py                     # Streamlit kullanıcı arayüzü ve görselleştirme katmanı
-├── requirements.txt           # Python bağımlılık listesi
-├── run_app.bat                # Windows için tek tıkla başlatma betiği
-├── run_app.sh                 # Linux / macOS için başlatma betiği
-├── .gitignore                 # Git versiyon kontrolü dışlama kuralları
-└── README.md                  # Proje dokümantasyonu
+├── data/
+│   ├── PTF2024.csv            # 2024 EPİAŞ saatlik PTF verisi (8.784 satır)
+│   └── PTF2025.csv            # 2025 EPİAŞ saatlik PTF verisi (8.760 satır)
+├── src/
+│   ├── data_loader.py         # CSV veri işleme ve zaman serisi düzenleme
+│   ├── optimizer.py           # Blok arbitraj ve ekonomik optimizasyon motoru
+│   ├── metrics.py             # Finansal KPI, döngü ve aylık metrik hesaplamaları
+│   └── exporter.py            # Excel (.xlsx) rapor üreticisi
+├── tests/
+│   ├── test_optimizer.py      # Optimizasyon motoru birim testleri
+│   └── test_e2e.py            # Uçtan uca sınır durum ve veri doğrulama testleri
+├── app.py                     # Streamlit kullanıcı arayüzü
+├── requirements.txt           # Bağımlılık listesi
+├── run_app.bat                # Windows ortamı başlatma betiği
+├── run_app.sh                 # Linux / macOS başlatma betiği
+└── .gitignore                 # Versiyon kontrol dışlama kuralları
 ```
 
 ---
 
-## 🚀 Kurulum ve Çalıştırma
+## Kurulum ve Çalıştırma
 
 ### Gereksinimler
-- **Python 3.10** veya daha güncel bir sürüm (Python 3.11, 3.12, 3.13 veya 3.14 önerilir)
+- Python 3.10 veya üzeri
 - Git
 
-### 1. Repoyu Klonlayın
-```bash
-git clone https://github.com/btuhany10k/BESS_Standalone_Arbitrage.git
-cd BESS_Standalone_Arbitrage
-```
+### Adımlar
 
-### 2. Sanal Ortam (Virtual Environment) Oluşturun ve Aktive Edin (Önerilir)
-- **Windows:**
-  ```powershell
-  python -m venv venv
-  .\venv\Scripts\activate
-  ```
-- **macOS / Linux:**
-  ```bash
-  python3 -m venv venv
-  source venv/bin/activate
-  ```
+1. Depoyu yerel ortamınıza klonlayın:
+   ```bash
+   git clone https://github.com/btuhany10k/BESS_Standalone_Arbitrage.git
+   cd BESS_Standalone_Arbitrage
+   ```
 
-### 3. Gerekli Kütüphaneleri Yükleyin
-```bash
-pip install -r requirements.txt
-```
+2. Sanal ortam oluşturup aktive edin (önerilir):
+   ```bash
+   # Windows
+   python -m venv venv
+   .\venv\Scripts\activate
 
-### 4. Uygulamayı Başlatın
-- **Windows (Hızlı Başlat):**  
-  `run_app.bat` dosyasına çift tıklayın veya terminalde:
-  ```powershell
-  .\run_app.bat
-  ```
-- **Terminalden Doğrudan Çalıştırma:**
-  ```bash
-  streamlit run app.py
-  ```
+   # Linux / macOS
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
 
-Tarayıcınızda otomatik olarak **http://localhost:8501** adresi açılacaktır.
+3. Bağımlılıkları yükleyin:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Uygulamayı başlatın:
+   ```bash
+   # Windows üzerinde doğrudan
+   .\run_app.bat
+
+   # veya komut satırından
+   streamlit run app.py
+   ```
+   Uygulama varsayılan olarak `http://localhost:8501` adresinde çalışır.
 
 ---
 
-## 🧪 Testleri Çalıştırma
+## Testler
 
-Uygulamanın veri doğruluğunu ve matematiksel modellerini doğrulamak için hazırlanan test suitlerini çalıştırabilirsiniz:
+Depo içindeki test paketlerini çalıştırmak için:
 
 ```bash
-# 1. Optimizasyon Motoru ve Yıpranma Birim Testleri
+# Birim testler (yıpranma ve pas geçme mantığı)
 python tests/test_optimizer.py
 
-# 2. Uçtan Uca (E2E) Kapsamlı Doğrulama Testi
+# Uçtan uca doğrulama testleri (sınır durumlar, veri bütünlüğü ve excel çıktısı)
 python tests/test_e2e.py
 ```
 
-Testler; veri sürekliliğini, artık yıl (2024 Şubat 29) takvim yönetimini, aşırı yıpranma maliyetlerinde sermaye koruma kararını ve Excel raporlarının satır bazlı doğruluğunu test eder.
-
 ---
 
-## 📐 Matematiksel Formülasyon ve Mantık
-
-### 1. Enerji Değişimleri
-- **Kapasite:** $E_{\max} = \frac{P_{\text{nominal}}}{\text{C-Rate}}$ (1C için $E_{\max} = P_{\text{nominal}}$ MWh)
-- **Başlangıç Seviyesi:** $E_{\text{start}} = \frac{\text{SoC}_{\text{start}}}{100} \times E_{\max}$
-- **Şarj Enerjisi (Dip Saat):** $\Delta E_{\text{ch}} = E_{\max} - E_{\text{start}}$
-- **Deşarj Enerjisi (Pik Saat):** $\Delta E_{\text{dis, grid}} = (E_{\max} - E_{\text{end}}) \times \text{RTE}$
-
-### 2. Kârlılık ve Karar Mekanizması
-$$\text{Brüt Kâr} = (\Delta E_{\text{dis, grid}} \times \text{PTF}_{\text{dis}}) - (\Delta E_{\text{ch}} \times \text{PTF}_{\text{ch}})$$
-$$\text{Yıpranma Maliyeti} = \text{Birim Yıpranma (\$/MWh)} \times (E_{\max} - E_{\text{end}})$$
-$$\text{Net Kâr} = \text{Brüt Kâr} - \text{Yıpranma Maliyeti}$$
-
-- **Eğer $\text{Net Kâr} \le 0$ ise:**  
-  Batarya beklemeye (standby) alınır, döngü yapılmaz. $\text{Net Kâr} = \$0.00$, $\text{Cycle} = 0$, $\text{Maliyet} = \$0.00$.
-
----
-
-## 📄 Lisans & Katkı
-Bu proje MIT Lisansı ile lisanslanmıştır. Katkıda bulunmak için lütfen bir Pull Request gönderin veya Issue açın.
+## Lisans
+Bu çalışma MIT Lisansı altında sunulmaktadır.
