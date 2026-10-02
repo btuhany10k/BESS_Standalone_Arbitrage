@@ -49,30 +49,34 @@ def run_e2e_tests():
     # 2. OPTİMİZASYON VE SINIR DURUM TESTLERİ
     print("\n--- 2. Optimizasyon & Sınır Durumları Testi ---")
     test_configs = [
-        # (Ad, Power, C-Rate, RTE, SoC_start, SoC_end, DegCost)
-        ("Standart 1 MW", 1.0, 1.0, 0.85, 0.0, 0.0, 0.0),
-        ("Maksimum Güç 150 MW", 150.0, 1.0, 0.85, 0.0, 0.0, 0.0),
-        ("Minimum Güç 0.5 MW", 0.5, 1.0, 0.85, 0.0, 0.0, 0.0),
-        ("Düşük RTE %70", 1.0, 1.0, 0.70, 0.0, 0.0, 0.0),
-        ("Yüksek RTE %98", 1.0, 1.0, 0.98, 0.0, 0.0, 0.0),
-        ("SoC Giriş %20 - Çıkış %20", 10.0, 1.0, 0.85, 20.0, 20.0, 0.0),
-        ("SoC Giriş %10 - Çıkış %90", 10.0, 1.0, 0.85, 10.0, 90.0, 0.0),
-        ("Orta Yıpranma Maliyeti $15/MWh", 1.0, 1.0, 0.85, 0.0, 0.0, 15.0),
-        ("Yüksek Yıpranma Maliyeti $50/MWh", 1.0, 1.0, 0.85, 0.0, 0.0, 50.0),
-        ("Aşırı Yıpranma (Tüm Günler Pas: $1000/MWh)", 1.0, 1.0, 0.85, 0.0, 0.0, 1000.0),
+        # (Ad, Power, C-Rate, RTE, SoC_start, SoC_end, DegCost, Strategy)
+        ("Standart 1 MW", 1.0, 1.0, 0.85, 0.0, 0.0, 0.0, "1_cycle"),
+        ("Maksimum Güç 150 MW", 150.0, 1.0, 0.85, 0.0, 0.0, 0.0, "1_cycle"),
+        ("Minimum Güç 0.5 MW", 0.5, 1.0, 0.85, 0.0, 0.0, 0.0, "1_cycle"),
+        ("Düşük RTE %70", 1.0, 1.0, 0.70, 0.0, 0.0, 0.0, "1_cycle"),
+        ("Yüksek RTE %98", 1.0, 1.0, 0.98, 0.0, 0.0, 0.0, "1_cycle"),
+        ("SoC Giriş %20 - Çıkış %20", 10.0, 1.0, 0.85, 20.0, 20.0, 0.0, "1_cycle"),
+        ("SoC Giriş %10 - Çıkış %90", 10.0, 1.0, 0.85, 10.0, 90.0, 0.0, "1_cycle"),
+        ("Orta Yıpranma Maliyeti $15/MWh", 1.0, 1.0, 0.85, 0.0, 0.0, 15.0, "1_cycle"),
+        ("Yüksek Yıpranma Maliyeti $50/MWh", 1.0, 1.0, 0.85, 0.0, 0.0, 50.0, "1_cycle"),
+        ("Aşırı Yıpranma (Tüm Günler Pas: $1000/MWh)", 1.0, 1.0, 0.85, 0.0, 0.0, 1000.0, "1_cycle"),
+        ("2-Cycle Standart 1 MW", 1.0, 1.0, 0.85, 0.0, 0.0, 0.0, "2_cycle"),
+        ("2-Cycle Orta Yıpranma $15/MWh", 1.0, 1.0, 0.85, 0.0, 0.0, 15.0, "2_cycle"),
+        ("2-Cycle SoC %10 - %10 ($5 Deg)", 5.0, 1.0, 0.85, 10.0, 10.0, 5.0, "2_cycle"),
     ]
 
-    for name, p_mw, c_r, rte, s_start, s_end, deg in test_configs:
+    for name, p_mw, c_r, rte, s_start, s_end, deg, strat in test_configs:
         cfg = BESSConfig(
             power_mw=p_mw,
             c_rate=c_r,
             rte=rte,
             soc_start_pct=s_start,
             soc_end_pct=s_end,
-            degradation_cost=deg
+            degradation_cost=deg,
+            strategy=strat,
         )
         hourly_df, daily_df = optimize_year(df_2025, cfg)
-        kpis = compute_kpis(daily_df, {"power_mw": p_mw, "capacity_mwh": cfg.capacity_mwh, "rte": rte, "c_rate": c_r, "degradation_cost": deg})
+        kpis = compute_kpis(daily_df, {"power_mw": p_mw, "capacity_mwh": cfg.capacity_mwh, "rte": rte, "c_rate": c_r, "degradation_cost": deg, "strategy": strat})
         monthly_df = compute_monthly_breakdown(daily_df, cfg.capacity_mwh)
 
         # Doğrulama 1: Net kâr asla negatif olamaz
@@ -86,11 +90,19 @@ def run_e2e_tests():
             assert (daily_df.loc[passed_mask, "degradation_cost"] == 0.0).all(), f"[{name}] Pas geçilen gün yıpranması sıfır değil!"
             assert (daily_df.loc[passed_mask, "cycles"] == 0.0).all(), f"[{name}] Pas geçilen gün döngüsü sıfır değil!"
 
-        # Doğrulama 3: Aktif günlerde net kâr > 0 ve ch < dis
+        # Doğrulama 3: Aktif günlerde net kâr > 0 ve kronolojik kural
         active_mask = ~daily_df["is_passed"]
         if active_mask.any():
             assert (daily_df.loc[active_mask, "net_profit"] > 0).all(), f"[{name}] Aktif gün kârı <= 0!"
-            assert (daily_df.loc[active_mask, "best_ch"] < daily_df.loc[active_mask, "best_dis"]).all(), f"[{name}] Şarj saati deşarj saatinden önce değil!"
+            # 1. Döngü kronolojisi
+            assert (daily_df.loc[active_mask, "ch1_hour"] < daily_df.loc[active_mask, "dis1_hour"]).all(), f"[{name}] 1. Şarj saati deşarj saatinden önce değil!"
+            # 2. Döngü aktif olan günlerde kronoloji: ch1 < dis1 < ch2 < dis2
+            two_cycle_mask = active_mask & (daily_df["cycles_count"] == 2)
+            if two_cycle_mask.any():
+                two_days = daily_df.loc[two_cycle_mask]
+                assert (two_days["ch1_hour"] < two_days["dis1_hour"]).all()
+                assert (two_days["dis1_hour"] < two_days["ch2_hour"]).all()
+                assert (two_days["ch2_hour"] < two_days["dis2_hour"]).all()
 
         # Doğrulama 4: Aylık toplamlar ile Yıllık KPI toplamları tam uyuşmalı
         assert abs(monthly_df["net_profit"].sum() - kpis["net_profit"]) < 1e-4, f"[{name}] Aylık Net Kâr toplamı yıllık KPI ile uyuşmuyor!"
@@ -106,6 +118,7 @@ def run_e2e_tests():
         assert "NaN" not in summary, f"[{name}] LinkedIn özetinde NaN var!"
 
         print(f"  ✅ Senaryo: '{name}' başarıyla doğrulandı. (Aktif: {kpis['active_days']}, Pas: {kpis['passed_days']}, Net Kâr: ${kpis['net_profit']:,.2f})")
+
 
     # 3. EXCEL RAPORLAMA TESTİ
     print("\n--- 3. Excel Raporlama & Şablon Testi ---")

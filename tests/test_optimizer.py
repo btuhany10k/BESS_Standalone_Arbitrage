@@ -119,10 +119,91 @@ def test_no_negative_days_in_metrics():
     assert kpis["passed_days"] == 1
 
 
+def test_two_cycle_synthetic_after_window():
+    """2. döngünün 1. döngüden SONRA yer aldığı çift pik senaryosu."""
+    prices = np.full(24, 40.0)
+    # 1. Döngü (en yüksek spread): 03:00 şarj (10 $), 11:00 deşarj (100 $)
+    prices[3] = 10.0
+    prices[11] = 100.0
+    # 2. Döngü (öğleden sonra): 14:00 şarj (20 $), 20:00 deşarj (80 $)
+    prices[14] = 20.0
+    prices[20] = 80.0
+
+    config = BESSConfig(power_mw=1.0, c_rate=1.0, rte=0.85, degradation_cost=0.0, strategy="2_cycle")
+    res = optimize_single_day(prices, config)
+
+    assert res["success"] is True
+    assert res["is_passed"] is False
+    assert res["cycles_count"] == 2
+    assert res["ch1_hour"] == 3
+    assert res["dis1_hour"] == 11
+    assert res["ch2_hour"] == 14
+    assert res["dis2_hour"] == 20
+    # Kronolojik sıra: 3 < 11 < 14 < 20
+    assert res["ch1_hour"] < res["dis1_hour"] < res["ch2_hour"] < res["dis2_hour"]
+    # 1. döngü net = 0.85*100 - 10 = 75
+    # 2. döngü net = 0.85*80 - 20 = 48
+    # Toplam net = 75 + 48 = 123
+    assert abs(res["net_profit"] - 123.0) < 1e-4
+    assert abs(res["cycles"] - 2.0) < 1e-4
+
+
+def test_two_cycle_synthetic_before_window():
+    """2. döngünün 1. döngüden ÖNCE yer aldığı çift pik senaryosu ve kronolojik etiketleme."""
+    prices = np.full(24, 40.0)
+    # 1. Döngü (akşam en yüksek spread): 13:00 şarj (10 $), 20:00 deşarj (100 $) -> Net = 75
+    prices[13] = 10.0
+    prices[20] = 100.0
+    # 2. Döngü (sabah): 02:00 şarj (15 $), 08:00 deşarj (75 $) -> Net = 0.85*75 - 15 = 48.75
+    prices[2] = 15.0
+    prices[8] = 75.0
+
+    config = BESSConfig(power_mw=1.0, c_rate=1.0, rte=0.85, degradation_cost=0.0, strategy="2_cycle")
+    res = optimize_single_day(prices, config)
+
+    assert res["success"] is True
+    assert res["cycles_count"] == 2
+    # Kronolojik sıralama kuralı: Günün ilk olayı Şarj 1 / Deşarj 1 olmalı
+    assert res["ch1_hour"] == 2
+    assert res["dis1_hour"] == 8
+    assert res["ch2_hour"] == 13
+    assert res["dis2_hour"] == 20
+    assert res["ch1_hour"] < res["dis1_hour"] < res["ch2_hour"] < res["dis2_hour"]
+    assert abs(res["net_profit"] - (75.0 + 48.75)) < 1e-4
+    assert abs(res["cycles"] - 2.0) < 1e-4
+
+
+def test_two_cycle_skip_when_second_cycle_unprofitable():
+    """2. döngü yıpranma maliyetini kurtarmadığında sadece 1. döngünün yapılması testi."""
+    prices = np.full(24, 50.0)
+    # 1. Döngü: 03:00 (10 $), 19:00 (100 $) -> Brüt = 75, Net = 75 - 15 = 60 > 0
+    prices[3] = 10.0
+    prices[19] = 100.0
+    # Potansiyel 2. aralık (21:00-23:00): 21:00 (50 $), 23:00 (60 $) -> Brüt = 0.85*60 - 50 = 1 $ < Yıpranma (15 $)
+    prices[21] = 50.0
+    prices[23] = 60.0
+
+    config = BESSConfig(power_mw=1.0, c_rate=1.0, rte=0.85, degradation_cost=15.0, strategy="2_cycle")
+    res = optimize_single_day(prices, config)
+
+    assert res["success"] is True
+    assert res["is_passed"] is False
+    assert res["cycles_count"] == 1
+    assert res["ch1_hour"] == 3
+    assert res["dis1_hour"] == 19
+    assert res["ch2_hour"] is None
+    assert res["dis2_hour"] is None
+    assert abs(res["net_profit"] - 60.0) < 1e-4
+    assert abs(res["cycles"] - 1.0) < 1e-4
+
+
 if __name__ == "__main__":
     test_single_day_synthetic()
     test_degradation_cost_skip_when_unprofitable()
     test_degradation_cost_deduction_when_profitable()
     test_no_negative_days_in_metrics()
-    print("Tüm birim testleri (Yıpranma Maliyeti & Pas Geçme) başarıyla geçti!")
+    test_two_cycle_synthetic_after_window()
+    test_two_cycle_synthetic_before_window()
+    test_two_cycle_skip_when_second_cycle_unprofitable()
+    print("Tüm birim testleri (1C, 2C, Yıpranma Maliyeti & Kronolojik Kurallar) başarıyla geçti!")
 

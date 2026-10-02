@@ -154,9 +154,10 @@ def calculate_optimization(
     soc_start_pct: float,
     soc_end_pct: float,
     degradation_cost: float = 0.0,
+    strategy: str = "1_cycle",
 ):
     """
-    Tam Blok 1C, İşletmeci SoC ve Yıpranma Maliyeti parametreleriyle yıllık simülasyonu çalıştırır.
+    Tam Blok 1C, İşletmeci SoC, Yıpranma Maliyeti ve 1/2 Döngü Stratejisiyle yıllık simülasyonu çalıştırır.
     """
     data_dict = get_cached_raw_data()
     if year not in data_dict:
@@ -170,6 +171,7 @@ def calculate_optimization(
         soc_start_pct=soc_start_pct,
         soc_end_pct=soc_end_pct,
         degradation_cost=degradation_cost,
+        strategy=strategy,
     )
     hourly_df, daily_df = optimize_year(df, config)
     kpis = compute_kpis(daily_df, {
@@ -178,6 +180,7 @@ def calculate_optimization(
         "c_rate": c_rate,
         "rte": rte,
         "degradation_cost": degradation_cost,
+        "strategy": strategy,
     })
     monthly_df = compute_monthly_breakdown(daily_df, config.capacity_mwh)
     return hourly_df, daily_df, kpis, monthly_df
@@ -274,21 +277,39 @@ if degradation_cost > 0:
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("#### 🛡️ Operasyon Stratejisi")
-st.sidebar.success(
-    "**1C Arbitraj Stratejisi**\n\n"
-    "• Günün en derin dip saatinde şarj.\n"
-    "• Akşam en yüksek pik saatinde deşarj.\n"
-    "• Net kâr negatif kalırsa gün pas geçilir ($0 kâr, 0 döngü)."
+
+strategy_option = st.sidebar.radio(
+    "Arbitraj Stratejisi",
+    options=["Günde 1 Döngü (Tek Blok)", "Günde 2 Döngü (Çift Blok)"],
+    index=0,
+    help="Günde 1 döngü veya en kârlı 1. döngünün dışındaki pencerelerde ek 2. döngü yapma stratejisi."
 )
+strategy = "2_cycle" if "2" in strategy_option else "1_cycle"
+
+if strategy == "2_cycle":
+    st.sidebar.info(
+        "⚡ **Günde 2 Döngü (Çift Blok) Stratejisi:**\n\n"
+        "• **1. Döngü:** Günün en yüksek spreadine sahip birincil şarj ve deşarjı.\n"
+        "• **2. Döngü:** 1. döngü saatlerinin dışındaki (önce veya sonra) en kârlı 2. saat çifti.\n"
+        "• **Ekonomik Filtre:** 2. döngü sadece net kârı > 0 ise yapılır, kârsızsa 1 döngüde kalınır.\n"
+        "• **Kronolojik İndeks:** Gün içi saat sırasına göre Şarj 1 / Deşarj 1 ve Şarj 2 / Deşarj 2 olarak etiketlenir."
+    )
+else:
+    st.sidebar.success(
+        "⚡ **1C Tek Blok Arbitrajı:**\n\n"
+        "• Günün en derin dip saatinde şarj.\n"
+        "• Akşam en yüksek pik saatinde deşarj.\n"
+        "• Net kâr negatif kalırsa gün pas geçilir ($0 kâr, 0 döngü)."
+    )
 
 # Hesaplamayı Çalıştır (Seçilen Yıl)
 hourly_df, daily_df, kpis, monthly_df = calculate_optimization(
-    selected_year, power_mw, c_rate, rte, float(soc_start_pct), float(soc_end_pct), float(degradation_cost)
+    selected_year, power_mw, c_rate, rte, float(soc_start_pct), float(soc_end_pct), float(degradation_cost), strategy
 )
 
 # 2024 ve 2025 Yıllık Kıyaslama Verileri (Excel raporu ve Kıyaslama Sekmesi için)
-_, _, kpis_2024, monthly_2024 = calculate_optimization(2024, power_mw, c_rate, rte, float(soc_start_pct), float(soc_end_pct), float(degradation_cost))
-_, _, kpis_2025, monthly_2025 = calculate_optimization(2025, power_mw, c_rate, rte, float(soc_start_pct), float(soc_end_pct), float(degradation_cost))
+_, _, kpis_2024, monthly_2024 = calculate_optimization(2024, power_mw, c_rate, rte, float(soc_start_pct), float(soc_end_pct), float(degradation_cost), strategy)
+_, _, kpis_2025, monthly_2025 = calculate_optimization(2025, power_mw, c_rate, rte, float(soc_start_pct), float(soc_end_pct), float(degradation_cost), strategy)
 
 comp_df = pd.DataFrame([
     {
@@ -324,9 +345,10 @@ comp_df = pd.DataFrame([
 ])
 
 # --- ANA EKRAN ---
+strat_display_name = "Günde 2 Döngü (Çift Blok)" if strategy == "2_cycle" else "Günde 1 Döngü (Tek Blok)"
 st.markdown('<div class="main-title">⚡ BESS PTF Spread Arbitraj Optimizasyonu</div>', unsafe_allow_html=True)
 st.markdown(
-    f'<div class="sub-title">EPİAŞ {selected_year} Yılı Saatlik Gerçek PTF ($/MWh) | 1C Arbitraj | Başlangıç SoC: %{soc_start_pct} ➔ Bitiş SoC: %{soc_end_pct} | Yıpranma: ${degradation_cost:.1f}/MWh</div>',
+    f'<div class="sub-title">EPİAŞ {selected_year} Yılı Saatlik Gerçek PTF ($/MWh) | {strat_display_name} | Başlangıç SoC: %{soc_start_pct} ➔ Bitiş SoC: %{soc_end_pct} | Yıpranma: ${degradation_cost:.1f}/MWh</div>',
     unsafe_allow_html=True
 )
 
@@ -554,55 +576,118 @@ with tab_daily:
         row=1, col=1
     )
 
-    # KESİNLİKLE TEKİL ŞARJ NOKTASI (Eğer o gün işlem yapıldıysa)
-    best_ch = day_summary["best_ch"]
-    if pd.notna(best_ch) and best_ch is not None and day_summary["net_profit"] > 0:
-        best_ch_int = int(best_ch)
-        ch_row = day_hourly[day_hourly["hour"] == best_ch_int].iloc[0]
-        fig.add_trace(
-            go.Scatter(
-                x=[best_ch_int],
-                y=[ch_row["ptf_usd"]],
-                mode="markers+text",
-                name="🔋 Şarj Saati",
-                marker=dict(
-                    color="#38bdf8",
-                    size=16,
-                    symbol="circle",
-                    line=dict(color="#ffffff", width=2.5)
-                ),
-                text=[f"Şarj: {ch_row['p_ch_mw']:.1f}MW"],
-                textposition="bottom center",
-                textfont=dict(size=12, color="#38bdf8", family="Inter"),
-                hovertemplate=f"<b>ŞARJ SAATİ</b><br>Saat: {best_ch_int:02d}:00<br>Fiyat: ${ch_row['ptf_usd']:.2f}/MWh<br>Şarj: {ch_row['p_ch_mw']:.1f}MW<extra></extra>",
-            ),
-            row=1, col=1
-        )
+    # 1. ve 2. Şarj & Deşarj Noktaları (Eğer o gün kârlı bir işlem yapıldıysa)
+    if not day_summary.get("is_passed", False) and day_summary["net_profit"] > 0:
+        ch1_val = day_summary.get("ch1_hour")
+        if ch1_val is None or pd.isna(ch1_val):
+            ch1_val = day_summary.get("best_ch")
+        dis1_val = day_summary.get("dis1_hour")
+        if dis1_val is None or pd.isna(dis1_val):
+            dis1_val = day_summary.get("best_dis")
+        ch2_val = day_summary.get("ch2_hour")
+        dis2_val = day_summary.get("dis2_hour")
 
-    # KESİNLİKLE TEKİL DEŞARJ NOKTASI (Eğer o gün işlem yapıldıysa)
-    best_dis = day_summary["best_dis"]
-    if pd.notna(best_dis) and best_dis is not None and day_summary["net_profit"] > 0:
-        best_dis_int = int(best_dis)
-        dis_row = day_hourly[day_hourly["hour"] == best_dis_int].iloc[0]
-        fig.add_trace(
-            go.Scatter(
-                x=[best_dis_int],
-                y=[dis_row["ptf_usd"]],
-                mode="markers+text",
-                name="⚡ Deşarj Saati",
-                marker=dict(
-                    color="#10b981",
-                    size=16,
-                    symbol="circle",
-                    line=dict(color="#ffffff", width=2.5)
+        has_two_cycles = pd.notna(ch2_val) and ch2_val is not None
+
+        # 1. Şarj Noktası
+        if pd.notna(ch1_val) and ch1_val is not None:
+            ch1_int = int(ch1_val)
+            ch1_row = day_hourly[day_hourly["hour"] == ch1_int].iloc[0]
+            ch1_name = "🔋 1. Şarj Saati" if has_two_cycles else "🔋 Şarj Saati"
+            ch1_txt = f"Şarj 1: {ch1_row['p_ch_mw']:.1f}MW" if has_two_cycles else f"Şarj: {ch1_row['p_ch_mw']:.1f}MW"
+            fig.add_trace(
+                go.Scatter(
+                    x=[ch1_int],
+                    y=[ch1_row["ptf_usd"]],
+                    mode="markers+text",
+                    name=ch1_name,
+                    marker=dict(
+                        color="#38bdf8",
+                        size=16,
+                        symbol="circle",
+                        line=dict(color="#ffffff", width=2.5)
+                    ),
+                    text=[ch1_txt],
+                    textposition="bottom center",
+                    textfont=dict(size=12, color="#38bdf8", family="Inter"),
+                    hovertemplate=f"<b>{'1. ' if has_two_cycles else ''}ŞARJ SAATİ</b><br>Saat: {ch1_int:02d}:00<br>Fiyat: ${ch1_row['ptf_usd']:.2f}/MWh<br>Şarj: {ch1_row['p_ch_mw']:.1f}MW<extra></extra>",
                 ),
-                text=[f"Deşarj: {dis_row['p_dis_mw']:.1f}MW"],
-                textposition="top center",
-                textfont=dict(size=12, color="#34d399", family="Inter"),
-                hovertemplate=f"<b>DEŞARJ SAATİ</b><br>Saat: {best_dis_int:02d}:00<br>Fiyat: ${dis_row['ptf_usd']:.2f}/MWh<br>Deşarj: {dis_row['p_dis_mw']:.1f}MW<extra></extra>",
-            ),
-            row=1, col=1
-        )
+                row=1, col=1
+            )
+
+        # 1. Deşarj Noktası
+        if pd.notna(dis1_val) and dis1_val is not None:
+            dis1_int = int(dis1_val)
+            dis1_row = day_hourly[day_hourly["hour"] == dis1_int].iloc[0]
+            dis1_name = "⚡ 1. Deşarj Saati" if has_two_cycles else "⚡ Deşarj Saati"
+            dis1_txt = f"Deşarj 1: {dis1_row['p_dis_mw']:.1f}MW" if has_two_cycles else f"Deşarj: {dis1_row['p_dis_mw']:.1f}MW"
+            fig.add_trace(
+                go.Scatter(
+                    x=[dis1_int],
+                    y=[dis1_row["ptf_usd"]],
+                    mode="markers+text",
+                    name=dis1_name,
+                    marker=dict(
+                        color="#10b981",
+                        size=16,
+                        symbol="circle",
+                        line=dict(color="#ffffff", width=2.5)
+                    ),
+                    text=[dis1_txt],
+                    textposition="top center",
+                    textfont=dict(size=12, color="#34d399", family="Inter"),
+                    hovertemplate=f"<b>{'1. ' if has_two_cycles else ''}DEŞARJ SAATİ</b><br>Saat: {dis1_int:02d}:00<br>Fiyat: ${dis1_row['ptf_usd']:.2f}/MWh<br>Deşarj: {dis1_row['p_dis_mw']:.1f}MW<extra></extra>",
+                ),
+                row=1, col=1
+            )
+
+        # 2. Şarj Noktası (varsa)
+        if has_two_cycles:
+            ch2_int = int(ch2_val)
+            ch2_row = day_hourly[day_hourly["hour"] == ch2_int].iloc[0]
+            fig.add_trace(
+                go.Scatter(
+                    x=[ch2_int],
+                    y=[ch2_row["ptf_usd"]],
+                    mode="markers+text",
+                    name="🔋 2. Şarj Saati",
+                    marker=dict(
+                        color="#60a5fa",
+                        size=16,
+                        symbol="diamond",
+                        line=dict(color="#ffffff", width=2.5)
+                    ),
+                    text=[f"Şarj 2: {ch2_row['p_ch_mw']:.1f}MW"],
+                    textposition="bottom center",
+                    textfont=dict(size=12, color="#60a5fa", family="Inter"),
+                    hovertemplate=f"<b>2. ŞARJ SAATİ</b><br>Saat: {ch2_int:02d}:00<br>Fiyat: ${ch2_row['ptf_usd']:.2f}/MWh<br>Şarj: {ch2_row['p_ch_mw']:.1f}MW<extra></extra>",
+                ),
+                row=1, col=1
+            )
+
+        # 2. Deşarj Noktası (varsa)
+        if pd.notna(dis2_val) and dis2_val is not None:
+            dis2_int = int(dis2_val)
+            dis2_row = day_hourly[day_hourly["hour"] == dis2_int].iloc[0]
+            fig.add_trace(
+                go.Scatter(
+                    x=[dis2_int],
+                    y=[dis2_row["ptf_usd"]],
+                    mode="markers+text",
+                    name="⚡ 2. Deşarj Saati",
+                    marker=dict(
+                        color="#34d399",
+                        size=16,
+                        symbol="diamond",
+                        line=dict(color="#ffffff", width=2.5)
+                    ),
+                    text=[f"Deşarj 2: {dis2_row['p_dis_mw']:.1f}MW"],
+                    textposition="top center",
+                    textfont=dict(size=12, color="#34d399", family="Inter"),
+                    hovertemplate=f"<b>2. DEŞARJ SAATİ</b><br>Saat: {dis2_int:02d}:00<br>Fiyat: ${dis2_row['ptf_usd']:.2f}/MWh<br>Deşarj: {dis2_row['p_dis_mw']:.1f}MW<extra></extra>",
+                ),
+                row=1, col=1
+            )
 
     # 2. SoC Eğrisi (Alt Panel)
     fig.add_trace(
@@ -678,16 +763,16 @@ with tab_daily:
     with st.expander("📋 Bu Günün 24 Saatlik Detay Tablosunu Gör"):
         st.markdown(
             '<div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.6rem;">'
-            '🔵 <b style="color: #38bdf8;">Mavi Satır:</b> Şarj Yapılan Saat &nbsp;|&nbsp; '
-            '🟢 <b style="color: #34d399;">Yeşil Satır:</b> Deşarj Yapılan Saat'
+            '🔵 <b style="color: #38bdf8;">Mavi Satır:</b> Şarj Yapılan Saatler (Şarj 1 / Şarj 2) &nbsp;|&nbsp; '
+            '🟢 <b style="color: #34d399;">Yeşil Satır:</b> Deşarj Yapılan Saatler (Deşarj 1 / Deşarj 2)'
             '</div>',
             unsafe_allow_html=True
         )
         display_day = day_hourly[[
-            "saat_str", "ptf_usd", "p_ch_mw", "p_dis_mw", "soc_mwh", "soc_pct", "charge_cost", "discharge_revenue", "degradation_cost", "net_profit"
+            "saat_str", "ptf_usd", "p_ch_mw", "p_dis_mw", "soc_mwh", "soc_pct", "charge_cost", "discharge_revenue", "degradation_cost", "net_profit", "action_label"
         ]].copy()
         display_day.columns = [
-            "Saat", "PTF ($/MWh)", "Şarj (MW)", "Deşarj (MW)", "SoC (MWh)", "SoC (%)", "Şarj Maliyeti ($)", "Deşarj Geliri ($)", "Yıpranma Maliyeti ($)", "Net Kâr ($)"
+            "Saat", "PTF ($/MWh)", "Şarj (MW)", "Deşarj (MW)", "SoC (MWh)", "SoC (%)", "Şarj Maliyeti ($)", "Deşarj Geliri ($)", "Yıpranma Maliyeti ($)", "Net Kâr ($)", "İşlem Durumu"
         ]
 
         def highlight_charge_discharge(row):
@@ -727,9 +812,9 @@ with tab_monthly:
         '📥 <span>365 Günlük Detaylı Simülasyon ve Fizibilite Raporu (.xlsx)</span>'
         '</div>'
         '<div style="font-size: 0.85rem; color: #94a3b8; line-height: 1.55;">'
-        f'Seçilen <b>{selected_year}</b> yılı ve sol paneldeki <b>{power_mw:.1f} MW</b> güç, <b>%{rte*100:.0f}</b> RTE, <b>${degradation_cost:.1f}/MWh</b> yıpranma maliyeti ve <b>%{soc_start_pct}</b> ➔ <b>%{soc_end_pct}</b> SoC parametrelerinize göre oluşturulan 5 sayfalı kapsamlı çalışma kitabı:<br>'
+        f'Seçilen <b>{selected_year}</b> yılı ve sol paneldeki <b>{power_mw:.1f} MW</b> güç, <b>%{rte*100:.0f}</b> RTE, <b>${degradation_cost:.1f}/MWh</b> yıpranma maliyeti, <b>%{soc_start_pct}</b> ➔ <b>%{soc_end_pct}</b> SoC ve <b>{strat_display_name}</b> parametrelerinize göre oluşturulan 5 sayfalı kapsamlı çalışma kitabı:<br>'
         '• ⏱️ <b>8760 Saatlik Detay:</b> Görseldeki 24 saatlik tablonun 365 günlük saatlik tam versiyonu (Tarih, Saat, PTF, Şarj/Deşarj MW, SoC %, Maliyet, Gelir, Yıpranma, Net Kâr, İşlem Durumu)<br>'
-        '• 📅 <b>Günlük Özet (365 Gün):</b> Gün gün şarj/deşarj saatleri, enerji miktarları, döngüler ve aktif/pas durumları<br>'
+        '• 📅 <b>Günlük Özet (365 Gün):</b> Gün gün 1. ve 2. şarj/deşarj saatleri, enerji miktarları, döngüler ve aktif/pas durumları<br>'
         '• 📑 <b>Aylık Kırılım:</b> 12 ayın tüm finansal ve operasyonel metrikleri<br>'
         '• 📊 <b>Özet & Parametreler:</b> Sistem konfigürasyonu ve yıllık fizibilite KPI\'ları<br>'
         '• ⚖️ <b>2024 vs 2025 Kıyaslama:</b> Yıllık performans karşılaştırma tablosu'
@@ -748,7 +833,8 @@ with tab_monthly:
                 rte=rte,
                 soc_start_pct=float(soc_start_pct),
                 soc_end_pct=float(soc_end_pct),
-                degradation_cost=float(degradation_cost)
+                degradation_cost=float(degradation_cost),
+                strategy=strategy,
             ),
             hourly_df=hourly_df,
             daily_df=daily_df,

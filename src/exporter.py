@@ -27,7 +27,7 @@ def generate_bess_excel_report(
         {'Kategori': 'Sistem Parametresi', 'Parametre': 'Gune Baslangic SoC', 'Deger': f'%{config.soc_start_pct:.0f}', 'Birim': '%'},
         {'Kategori': 'Sistem Parametresi', 'Parametre': 'Gun Sonu Hedef SoC', 'Deger': f'%{config.soc_end_pct:.0f}', 'Birim': '%'},
         {'Kategori': 'Sistem Parametresi', 'Parametre': 'Yıpranma Maliyeti', 'Deger': f'${config.degradation_cost:.2f}', 'Birim': '$/MWh'},
-        {'Kategori': 'Sistem Parametresi', 'Parametre': 'Operasyon Stratejisi', 'Deger': '1C Arbitraj', 'Birim': '-'},
+        {'Kategori': 'Sistem Parametresi', 'Parametre': 'Operasyon Stratejisi', 'Deger': 'Günde 2 Döngüye Kadar (Çift Blok)' if getattr(config, 'strategy', '1_cycle') == '2_cycle' else '1C Arbitraj (Günde 1 Döngü)', 'Birim': '-'},
         {'Kategori': 'Finansal Sonuclar', 'Parametre': 'Toplam Desarj Geliri', 'Deger': round(kpis['total_revenue'], 2), 'Birim': '$'},
         {'Kategori': 'Finansal Sonuclar', 'Parametre': 'Toplam Sarj Maliyeti', 'Deger': round(kpis['total_cost'], 2), 'Birim': '$'},
         {'Kategori': 'Finansal Sonuclar', 'Parametre': 'Brut Arbitraj Kari', 'Deger': round(kpis.get('gross_profit', kpis['total_revenue'] - kpis['total_cost']), 2), 'Birim': '$'},
@@ -48,6 +48,8 @@ def generate_bess_excel_report(
 
     hourly_clean = hourly_df.copy()
     def get_action_label(row):
+        if row.get('action_label'):
+            return row['action_label']
         if row.get('is_charging', False):
             return 'Sarj'
         elif row.get('is_discharging', False):
@@ -85,10 +87,21 @@ def generate_bess_excel_report(
     else:
         daily_clean['Tarih'] = daily_clean['date'].astype(str)
 
-    daily_clean['Sarj Saati'] = daily_clean['best_ch'].apply(
+    ch1_col = daily_clean['ch1_hour'] if 'ch1_hour' in daily_clean.columns else daily_clean['best_ch']
+    dis1_col = daily_clean['dis1_hour'] if 'dis1_hour' in daily_clean.columns else daily_clean['best_dis']
+    ch2_col = daily_clean['ch2_hour'] if 'ch2_hour' in daily_clean.columns else pd.Series([None] * len(daily_clean))
+    dis2_col = daily_clean['dis2_hour'] if 'dis2_hour' in daily_clean.columns else pd.Series([None] * len(daily_clean))
+
+    daily_clean['1. Sarj Saati'] = ch1_col.apply(
         lambda x: f'{int(x):02d}:00' if pd.notna(x) and x is not None else '-'
     )
-    daily_clean['Desarj Saati'] = daily_clean['best_dis'].apply(
+    daily_clean['1. Desarj Saati'] = dis1_col.apply(
+        lambda x: f'{int(x):02d}:00' if pd.notna(x) and x is not None else '-'
+    )
+    daily_clean['2. Sarj Saati'] = ch2_col.apply(
+        lambda x: f'{int(x):02d}:00' if pd.notna(x) and x is not None else '-'
+    )
+    daily_clean['2. Desarj Saati'] = dis2_col.apply(
         lambda x: f'{int(x):02d}:00' if pd.notna(x) and x is not None else '-'
     )
     daily_clean['Operasyon Durumu'] = daily_clean['is_passed'].apply(
@@ -111,7 +124,8 @@ def generate_bess_excel_report(
 
     daily_export = daily_clean[[
         'Tarih', 'month', 'Min PTF ($/MWh)', 'Max PTF ($/MWh)', 'Ort. PTF ($/MWh)', 'Gunluk Spread ($/MWh)',
-        'Sarj Saati', 'Desarj Saati', 'Sarj Enerjisi (MWh)', 'Desarj Enerjisi (MWh)',
+        '1. Sarj Saati', '1. Desarj Saati', '2. Sarj Saati', '2. Desarj Saati',
+        'Sarj Enerjisi (MWh)', 'Desarj Enerjisi (MWh)',
         'Sarj Maliyeti ($)', 'Desarj Geliri ($)', 'Brut Kar ($)', 'Yipranma Maliyeti ($)',
         'Net Kar ($)', 'Cycle (EFC)', 'Cycle Basina Kar ($/Cycle)', 'Operasyon Durumu'
     ]].copy()

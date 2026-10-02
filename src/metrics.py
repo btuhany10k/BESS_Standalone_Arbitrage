@@ -56,6 +56,7 @@ def compute_kpis(daily_df: pd.DataFrame, config_info: Dict[str, Any]) -> Dict[st
         "c_rate": config_info.get("c_rate", 1.0),
         "rte": config_info.get("rte", 0.85),
         "degradation_cost_unit": config_info.get("degradation_cost", 0.0),
+        "strategy": config_info.get("strategy", "1_cycle"),
     }
 
 
@@ -125,6 +126,8 @@ def generate_linkedin_summary(year: int, kpis: Dict[str, Any]) -> str:
     gross_prof = kpis.get("gross_profit", kpis["net_profit"])
     passed_days = kpis.get("passed_days", 0)
 
+    strat_text = "Günde 2 Döngüye Kadar Arbitraj (Çift Blok)" if kpis.get("strategy") == "2_cycle" else "1C Arbitraj (Günde En Kârlı 1 Şarj / 1 Deşarj)"
+
     deg_line = ""
     if deg_unit > 0:
         deg_line = f"• 🛠️ Yıpranma Maliyeti Parametresi: ${deg_unit:.1f}/MWh (Toplam: ${deg_total:,.2f})\n"
@@ -135,7 +138,7 @@ def generate_linkedin_summary(year: int, kpis: Dict[str, Any]) -> str:
 • Batarya Gücü: {p_mw:,.1f} MW
 • Depolama Kapasitesi: {cap_mwh:,.1f} MWh ({c_rate:.1f}C)
 • Çevrim Verimliliği (RTE): %{rte_pct:.0f}
-• Operasyon Stratejisi: 1C Arbitraj (Günde En Kârlı 1 Şarj / 1 Deşarj)
+• Operasyon Stratejisi: {strat_text}
 {deg_line}
 📊 **{year} Yılı Yıllık Arbitraj Performansı:**
 • 🟢 Toplam Deşarj Geliri: ${kpis['total_revenue']:,.2f}
