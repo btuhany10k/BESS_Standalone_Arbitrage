@@ -210,7 +210,7 @@ power_mw = st.sidebar.slider(
     "Nominal Güç (MW)",
     min_value=0.5,
     max_value=150.0,
-    value=1.0,
+    value=50.0,
     step=0.5,
     help="Bataryanın maksimum şarj ve deşarj gücü."
 )
