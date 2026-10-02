@@ -390,7 +390,7 @@ tab_daily, tab_monthly, tab_comparison, tab_linkedin = st.tabs([
 # =========================================================================
 with tab_daily:
     st.markdown("#### 📅 Gün Seçimi ve 24 Saatlik Şarj / Deşarj Grafiği")
-    st.caption("Günün en ucuz saatinde tekil tam şarj, en pahalı akşam pik saatinde tekil tam deşarj. Parçalanma olmadan temiz 1C döngüsü.")
+    st.caption("Günün en uygun fiyatlı saatinde şarj, en yüksek fiyatlı saatinde deşarj operasyonu ve saatlik batarya doluluk (SoC) profili.")
 
     # Tarih Seçim Paneli (Takvim Kartı + Gün, Ay, Yıl Kartları)
     months_dict = {

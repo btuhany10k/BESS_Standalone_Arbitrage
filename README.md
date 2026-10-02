@@ -6,14 +6,12 @@ Model, 2024 (artık yıl, 8.784 saat) ve 2025 (8.760 saat) gerçekleşen piyasa 
 
 ---
 
-## Model Yaklaşımı ve Metodoloji
+## Model Yaklaşımı
 
-Geleneksel lineer programlama modelleri, sürekli değişken kısıtları nedeniyle bataryayı gün içine yayılmış mikro dilimlerle (örn. 0.1 MW) şarj/deşarj etme eğilimindedir. Bu durum pratikte batarya hücre ömrü ve invertör yönetimi açısından uygulanabilir değildir.
-
-Bu çalışmada uygulanan yöntem:
-- **1C Blok Arbitraj Stratejisi:** Günlük 24 saatlik fiyat eğrisinde şarjın deşarjdan önce gerçekleşmesi koşuluyla en yüksek net marjı veren tekil şarj ve tekil deşarj saat çiftini analitik olarak belirler.
+Model, gün içi fiyat hareketlerine göre batarya işletimini simüle eder:
+- **1C Arbitraj Stratejisi:** Günlük 24 saatlik fiyat eğrisinde şarjın deşarjdan önce gerçekleşmesi koşuluyla en yüksek net kârı sağlayan tekil şarj ve deşarj saat çiftini belirler.
 - **İşletmeci SoC Yönetimi:** Başlangıç ve hedef bitiş doluluk sınırları kullanıcı tarafından belirlenir; şarj dip saatte bataryayı tam kapasiteye ulaştırırken, deşarj bataryayı hedef bitiş seviyesine indirir.
-- **Yıpranma Maliyeti ve Pas Geçme Kuralı:** Döngü başına hücre amortisman maliyeti ($/MWh) hesaba katılır. Fiyat makası verimlilik kaybı ve yıpranma maliyetini karşılamıyorsa batarya o gün çalıştırılmaz (bekleme / idle; 0 döngü, $0 maliyet, $0 kâr).
+- **Yıpranma Maliyeti ve Pas Geçme Kuralı:** Döngü başına hücre amortisman maliyeti ($/MWh) hesaba katılır. Fiyat farkı verimlilik kaybı ve yıpranma maliyetini karşılamıyorsa batarya o gün çalıştırılmaz (bekleme / standby modu; 0 döngü, $0 maliyet, $0 kâr).
 
 ---
 

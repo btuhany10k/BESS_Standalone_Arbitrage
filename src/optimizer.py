@@ -1,8 +1,8 @@
 """
-BESS Tam Blok (Full Block 1C) Optimizasyon Motoru
-Günün en kârlı tekil dip (şarj) ve tepe (deşarj) saatlerini tespit eder.
+BESS 1C Arbitraj Optimizasyon Motoru
+Günün en kârlı şarj ve deşarj saatlerini tespit eder.
 İşletmecinin belirlediği gün başlangıç ve gün sonu SoC (%) seviyelerine göre
-tam blok çalışma gerçekleştirir. Parçalı (0.1 MW gibi) işlemler tamamen engellenir.
+arbitraj simülasyonunu gerçekleştirir.
 """
 
 from dataclasses import dataclass
@@ -37,7 +37,7 @@ def optimize_single_day(
     config: BESSConfig
 ) -> Dict[str, np.ndarray | float | bool | int | None]:
     """
-    Tam Blok (Full Block 1C) ve İşletmeci SoC Başlangıç/Bitiş Kurallı Optimizasyon.
+    1C ve İşletmeci SoC Başlangıç/Bitiş Kurallı Arbitraj Optimizasyonu.
     
     Mantık:
       - Güne soc_start_pct seviyesinde başlanır (soc_start = soc_start_pct/100 * E_max).
@@ -50,8 +50,7 @@ def optimize_single_day(
       - Yıpranma Maliyeti = config.degradation_cost * delta_dis_storage
       - Net Kâr = Brüt Kâr - Yıpranma Maliyeti
       - Bu Net Kârı maksimize eden tekil (ch, dis) çifti (ch < dis) seçilir.
-      - Kesinlikle parçalı alım-satım (0.1 MW vb.) yapılmaz.
-      - Net Kâr <= 0 ise batarya gün boyu işlem yapmaz (Pas Geçilir: 0 MW, 0 Cycle, $0 Maliyet, $0 Kâr).
+      - Net Kâr <= 0 ise batarya gün boyu bekletilir (Pas Geçilir: 0 MW, 0 Cycle, $0 Maliyet, $0 Kâr).
     """
     T = len(prices)
     P_max = config.power_mw
