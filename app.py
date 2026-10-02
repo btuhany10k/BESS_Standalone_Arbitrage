@@ -28,12 +28,12 @@ importlib.reload(src.metrics)
 importlib.reload(src.exporter)
 from src.data_loader import load_all_ptf_data
 from src.optimizer import BESSConfig, optimize_year
-from src.metrics import compute_kpis, compute_monthly_breakdown, generate_linkedin_summary
+from src.metrics import compute_kpis, compute_monthly_breakdown
 from src.exporter import generate_bess_excel_report
 
 # Sayfa Konfigürasyonu
 st.set_page_config(
-    page_title="BESS Arbitraj Optimizasyonu | LinkedIn Fizibilite",
+    page_title="BESS Arbitraj Optimizasyonu | Fizibilite Paneli",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -112,19 +112,6 @@ st.markdown("""
     }
     .kpi-cycle {
         color: #38bdf8 !important;
-    }
-    
-    /* LinkedIn Özet Kutusu */
-    .linkedin-box {
-        background: rgba(15, 23, 42, 0.75);
-        border: 1px solid rgba(148, 163, 184, 0.25);
-        border-radius: 10px;
-        padding: 1.3rem;
-        font-family: inherit;
-        font-size: 0.88rem;
-        color: #f1f5f9;
-        white-space: pre-wrap;
-        line-height: 1.55;
     }
     
     /* Tarih Mini Kartları */
@@ -400,11 +387,10 @@ kpi_html = f'<div class="kpi-container">{"".join(cards)}</div>'
 st.markdown(kpi_html, unsafe_allow_html=True)
 
 # --- SEKME DÜZENİ ---
-tab_daily, tab_monthly, tab_comparison, tab_linkedin = st.tabs([
+tab_daily, tab_monthly, tab_comparison = st.tabs([
     "📈 Günlük Arbitraj Detayı (Seçilen Gün)",
     "📊 Aylık ve Yıllık Kırılım",
     "⚖️ 2024 vs 2025 Kıyaslama",
-    "💼 LinkedIn Fizibilite Kartı",
 ])
 
 # =========================================================================
@@ -1122,21 +1108,3 @@ with tab_comparison:
         yaxis=dict(title="Net Kâr ($)", gridcolor="rgba(148, 163, 184, 0.12)", tickfont=dict(color="#94a3b8"), title_font=dict(color="#cbd5e1")),
     )
     st.plotly_chart(fig_comp_m, width="stretch")
-
-# =========================================================================
-# SEKME 4: LINKEDIN FİZİBİLİTE KARTI
-# =========================================================================
-with tab_linkedin:
-    st.markdown("#### 💼 LinkedIn Paylaşımı İçin Hazır Fizibilite Raporu")
-    st.caption("Aşağıdaki metni ve grafiği doğrudan LinkedIn gönderinizde kullanabilirsiniz. Tüm değerler seçtiğiniz parametrelere göre anında güncellenir.")
-
-    linkedin_text = generate_linkedin_summary(selected_year, kpis)
-
-    st.markdown(f'<div class="linkedin-box">{linkedin_text}</div>', unsafe_allow_html=True)
-
-    st.download_button(
-        label="📥 LinkedIn Metnini İndir (.txt)",
-        data=linkedin_text,
-        file_name=f"BESS_Fizibilite_{selected_year}_LinkedIn.txt",
-        mime="text/plain",
-    )
