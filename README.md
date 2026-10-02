@@ -76,8 +76,8 @@ Batarya yatırımı yapacak enerji yatırımcıları, portföy yöneticileri ve 
 
 ### 1. Repoyu Klonlayın
 ```bash
-git clone https://github.com/KULLANICI_ADINIZ/REPO_ADINIZ.git
-cd REPO_ADINIZ
+git clone https://github.com/btuhany10k/BESS_Standalone_Arbitrage.git
+cd BESS_Standalone_Arbitrage
 ```
 
 ### 2. Sanal Ortam (Virtual Environment) Oluşturun ve Aktive Edin (Önerilir)
