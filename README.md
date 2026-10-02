@@ -11,24 +11,9 @@ Model, 2024 (artık yıl, 8.784 saat) ve 2025 (8.760 saat) gerçekleşen piyasa 
 Geleneksel lineer programlama modelleri, sürekli değişken kısıtları nedeniyle bataryayı gün içine yayılmış mikro dilimlerle (örn. 0.1 MW) şarj/deşarj etme eğilimindedir. Bu durum pratikte batarya hücre ömrü ve invertör yönetimi açısından uygulanabilir değildir.
 
 Bu çalışmada uygulanan yöntem:
-- **1C Blok Arbitraj Stratejisi:** Günlük 24 saatlik fiyat eğrisinde şarjın deşarjdan önce gerçekleşmesi ($ch < dis$) koşuluyla en yüksek net marjı veren tekil şarj ve tekil deşarj saat çiftini analitik olarak belirler.
-- **İşletmeci SoC Yönetimi:** Başlangıç ($\text{SoC}_{\text{start}}$) ve hedef bitiş ($\text{SoC}_{\text{end}}$) doluluk sınırları kullanıcı tarafından belirlenir; şarj dip saatte bataryayı tam kapasiteye ulaştırırken, deşarj bataryayı hedef bitiş seviyesine indirir.
-- **Yıpranma Maliyeti ve Pas Geçme Kuralı:** Döngü başına hücre amortisman maliyeti ($/MWh) hesaba katılır. Fiyat makası verimlilik kaybı ve yıpranma maliyetini karşılamıyorsa ($\text{Net Kâr} \le 0$), batarya o gün çalıştırılmaz (idle; 0 döngü, $0 maliyet, $0 kâr).
-
-### Matematiksel Formülasyon
-
-1. **Kapasite ve Enerji Hacimleri:**
-   $$E_{\max} = \frac{P_{\text{nominal}}}{\text{C-Rate}} \quad (\text{MWh})$$
-   $$\Delta E_{\text{ch}} = \max\left(0, E_{\max} - \frac{\text{SoC}_{\text{start}}}{100} E_{\max}\right)$$
-   $$\Delta E_{\text{dis, storage}} = \max\left(0, E_{\max} - \frac{\text{SoC}_{\text{end}}}{100} E_{\max}\right)$$
-   $$\Delta E_{\text{dis, grid}} = \Delta E_{\text{dis, storage}} \times \text{RTE}$$
-
-2. **Ekonomik Karar Fonksiyonu:**
-   $$\text{Brüt Kâr} = (\Delta E_{\text{dis, grid}} \times \text{PTF}_{\text{dis}}) - (\Delta E_{\text{ch}} \times \text{PTF}_{\text{ch}})$$
-   $$\text{Yıpranma Maliyeti} = C_{\text{deg}} \times \Delta E_{\text{dis, storage}}$$
-   $$\text{Net Kâr} = \text{Brüt Kâr} - \text{Yıpranma Maliyeti}$$
-
-   $$\text{Eğer } \max_{ch < dis} \text{Net Kâr} \le 0 \implies \text{Operasyon Pas Geçilir (Standby)}$$
+- **1C Blok Arbitraj Stratejisi:** Günlük 24 saatlik fiyat eğrisinde şarjın deşarjdan önce gerçekleşmesi koşuluyla en yüksek net marjı veren tekil şarj ve tekil deşarj saat çiftini analitik olarak belirler.
+- **İşletmeci SoC Yönetimi:** Başlangıç ve hedef bitiş doluluk sınırları kullanıcı tarafından belirlenir; şarj dip saatte bataryayı tam kapasiteye ulaştırırken, deşarj bataryayı hedef bitiş seviyesine indirir.
+- **Yıpranma Maliyeti ve Pas Geçme Kuralı:** Döngü başına hücre amortisman maliyeti ($/MWh) hesaba katılır. Fiyat makası verimlilik kaybı ve yıpranma maliyetini karşılamıyorsa batarya o gün çalıştırılmaz (bekleme / idle; 0 döngü, $0 maliyet, $0 kâr).
 
 ---
 
