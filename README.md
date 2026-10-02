@@ -9,7 +9,9 @@ Model, 2024 (artık yıl, 8.784 saat) ve 2025 (8.760 saat) gerçekleşen piyasa 
 ## Model Yaklaşımı
 
 Model, gün içi fiyat hareketlerine göre batarya işletimini simüle eder:
-- **1C Arbitraj Stratejisi:** Günlük 24 saatlik fiyat eğrisinde şarjın deşarjdan önce gerçekleşmesi koşuluyla en yüksek net kârı sağlayan tekil şarj ve deşarj saat çiftini belirler.
+- **Operasyon Stratejileri (1 veya 2 Döngü / Gün):**
+  - **Günde 1 Döngü (Tek Blok):** Günlük 24 saatlik fiyat eğrisinde şarjın deşarjdan önce gerçekleşmesi koşuluyla en yüksek net kârı sağlayan tekil $(ch_1, dis_1)$ saat çiftini belirler.
+  - **Günde 2 Döngü (Çift Blok):** En kârlı 1. döngünün saat aralığı dışındaki serbest pencerelerde ($ch_2 < dis_2 < ch_1$ veya $dis_1 < ch_2 < dis_2$) ikinci bir kârlı döngü arar. İkinci döngü sadece net kârı $> 0$ ise devreye alınır; kârsızsa 1 döngüde kalınır. İşlemler gün içi kronolojik sırasına göre `Şarj 1`, `Deşarj 1`, `Şarj 2`, `Deşarj 2` olarak indekslenir.
 - **İşletmeci SoC Yönetimi:** Başlangıç ve hedef bitiş doluluk sınırları kullanıcı tarafından belirlenir; şarj dip saatte bataryayı tam kapasiteye ulaştırırken, deşarj bataryayı hedef bitiş seviyesine indirir.
 - **Yıpranma Maliyeti ve Pas Geçme Kuralı:** Döngü başına hücre amortisman maliyeti ($/MWh) hesaba katılır. Fiyat farkı verimlilik kaybı ve yıpranma maliyetini karşılamıyorsa batarya o gün çalıştırılmaz (bekleme / standby modu; 0 döngü, $0 maliyet, $0 kâr).
 
