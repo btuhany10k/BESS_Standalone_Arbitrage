@@ -56,7 +56,16 @@ Model, gün içi fiyat hareketlerine göre batarya işletimini simüle eder:
 - Python 3.10 veya üzeri
 - Git
 
-### Adımlar
+### 🚀 En Kolay Başlatma (Tek Tıkla Otomatik Kurulum)
+
+Python kurulu bir bilgisayarda depoyu indirdikten sonra terminal komutlarıyla uğraşmadan:
+- **Windows:** Doğrudan `run_app.bat` dosyasına çift tıklayın.  
+  *(Sanal ortamı otomatik kurar, `requirements.txt` kütüphanelerini yükler ve tarayıcıda paneli açar.)*
+- **macOS / Linux:** Terminalde `./run_app.sh` dosyasını çalıştırın.
+
+---
+
+### Manuel Kurulum ve Çalıştırma
 
 1. Depoyu yerel ortamınıza klonlayın:
    ```bash
@@ -82,10 +91,6 @@ Model, gün içi fiyat hareketlerine göre batarya işletimini simüle eder:
 
 4. Uygulamayı başlatın:
    ```bash
-   # Windows üzerinde doğrudan
-   .\run_app.bat
-
-   # veya komut satırından
    streamlit run app.py
    ```
    Uygulama varsayılan olarak `http://localhost:8501` adresinde çalışır.
