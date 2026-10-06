@@ -2,9 +2,10 @@
 BESS 0.5C Projesi - EPİAŞ PTF Veri Yükleyici (Data Loader)
 2024 ve 2025 EPİAŞ Piyasa Takas Fiyatı (PTF) saatlik verilerini yükler ve standartlaştırır.
 """
+from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 import numpy as np
 import pandas as pd
 
@@ -23,7 +24,7 @@ def parse_turkish_float(val) -> float:
         return np.nan
 
 
-def load_ptf_file(file_path: Path | str) -> pd.DataFrame:
+def load_ptf_file(file_path: Union[Path, str]) -> pd.DataFrame:
     """Tek bir EPİAŞ PTF CSV dosyasını okur ve temizler."""
     file_path = Path(file_path)
     if not file_path.exists():
@@ -81,9 +82,21 @@ def load_ptf_file(file_path: Path | str) -> pd.DataFrame:
 def load_all_ptf_data(base_dirs: Optional[list] = None) -> Dict[int, pd.DataFrame]:
     """2024 ve 2025 PTF dosyalarını tarayıp yükler."""
     if base_dirs is None:
-        current_dir = Path(__file__).resolve().parent.parent
+        file_dir = Path(__file__).resolve().parent
+        current_dir = file_dir.parent
         parent_dir = current_dir.parent
-        base_dirs = [current_dir, parent_dir, parent_dir / "data", current_dir / "data"]
+        cwd = Path.cwd()
+        base_dirs = [
+            cwd,
+            cwd / "data",
+            cwd / "bess_05c",
+            cwd / "bess_05c" / "data",
+            current_dir,
+            current_dir / "data",
+            parent_dir,
+            parent_dir / "data",
+            file_dir,
+        ]
 
     data = {}
     for year in [2024, 2025]:
@@ -96,9 +109,13 @@ def load_all_ptf_data(base_dirs: Optional[list] = None) -> Dict[int, pd.DataFram
             ]
             for p in candidates:
                 if p.exists():
-                    data[year] = load_ptf_file(p)
-                    found = True
-                    break
+                    try:
+                        data[year] = load_ptf_file(p)
+                        found = True
+                        break
+                    except Exception:
+                        continue
             if found:
                 break
     return data
+

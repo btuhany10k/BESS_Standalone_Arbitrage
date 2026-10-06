@@ -2,9 +2,10 @@
 EPİAŞ PTF Veri Yükleyici ve Temizleyici (Data Loader)
 2024 ve 2025 PTF (TL, USD, EUR) verilerini yükler ve standartlaştırır.
 """
+from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 
@@ -24,7 +25,7 @@ def parse_turkish_float(val) -> float:
         return np.nan
 
 
-def load_ptf_file(file_path: Path | str) -> pd.DataFrame:
+def load_ptf_file(file_path: Union[Path, str]) -> pd.DataFrame:
     """Tek bir EPİAŞ PTF CSV dosyasını okur ve temizler."""
     file_path = Path(file_path)
     if not file_path.exists():
@@ -100,32 +101,30 @@ def load_ptf_file(file_path: Path | str) -> pd.DataFrame:
     return cleaned
 
 
-def load_all_ptf_data(base_dir: Path | str = ".") -> Dict[int, pd.DataFrame]:
+def load_all_ptf_data(base_dir: Union[Path, str] = ".") -> Dict[int, pd.DataFrame]:
     """2024 ve 2025 PTF dosyalarını yükleyip sözlük olarak döndürür."""
     base_dir = Path(base_dir)
     data = {}
+    cwd = Path.cwd()
 
-    candidates = {
-        2024: [
-            base_dir / "PTF2024.csv",
-            base_dir / "ptf_2024.csv",
-            base_dir / "data" / "PTF2024.csv",
-            base_dir.parent / "data" / "PTF2024.csv",
-            base_dir.parent / "data" / "ptf_2024.csv",
-        ],
-        2025: [
-            base_dir / "PTF2025.csv",
-            base_dir / "ptf_2025.csv",
-            base_dir / "data" / "PTF2025.csv",
-            base_dir.parent / "data" / "PTF2025.csv",
-            base_dir.parent / "data" / "ptf_2025.csv",
-        ],
-    }
-
-    for year, paths in candidates.items():
-        for p in paths:
+    for year in [2024, 2025]:
+        candidates = [
+            base_dir / f"PTF{year}.csv",
+            base_dir / f"ptf_{year}.csv",
+            base_dir / "data" / f"PTF{year}.csv",
+            base_dir.parent / "data" / f"PTF{year}.csv",
+            base_dir.parent / f"PTF{year}.csv",
+            cwd / f"PTF{year}.csv",
+            cwd / "data" / f"PTF{year}.csv",
+            cwd / "bess_05c" / "data" / f"PTF{year}.csv",
+        ]
+        for p in candidates:
             if p.exists():
-                data[year] = load_ptf_file(p)
-                break
+                try:
+                    data[year] = load_ptf_file(p)
+                    break
+                except Exception:
+                    continue
 
     return data
+
