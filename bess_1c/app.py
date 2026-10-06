@@ -17,15 +17,6 @@ root_dir = Path(__file__).resolve().parent
 if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
-import importlib
-import src.data_loader
-import src.optimizer
-import src.metrics
-import src.exporter
-importlib.reload(src.data_loader)
-importlib.reload(src.optimizer)
-importlib.reload(src.metrics)
-importlib.reload(src.exporter)
 from src.data_loader import load_all_ptf_data
 from src.optimizer import BESSConfig, optimize_year
 from src.metrics import compute_kpis, compute_monthly_breakdown
