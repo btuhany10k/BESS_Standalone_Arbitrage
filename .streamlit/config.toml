@@ -6,10 +6,10 @@ textColor = "#dfe2ee"
 font = "sans serif"
 
 [server]
-port = 8502
 headless = true
 enableCORS = false
 enableXsrfProtection = false
 
 [browser]
 gatherUsageStats = false
+
