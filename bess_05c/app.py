@@ -883,7 +883,7 @@ with tab_yearly:
             <div class="card-metric sky">${row_24['Net Kâr ($)']:,.2f}</div>
             <div class="card-foot">
                 <span>Döngü Sayısı:</span>
-                <span class="val-mono">{row_24['Cycle Sayısı']:.1f} EFC</span>
+                <span class="val-mono">{row_24['Döngü Sayısı (EFC)']:.1f} EFC</span>
             </div>
             <div style="font-size: 0.74rem; color: #94a3b8; margin-top: 0.4rem; font-family: var(--font-mono);">
                 Ort. Spread: <b style="color: #dfe2ee;">${row_24['Gerçekleşen Spread ($/MWh)']:.2f}/MWh</b> | Aktif: {row_24['Aktif Gün']} gün
@@ -901,7 +901,7 @@ with tab_yearly:
             <div class="card-metric emerald">${row_25['Net Kâr ($)']:,.2f}</div>
             <div class="card-foot">
                 <span>Döngü Sayısı:</span>
-                <span class="val-mono">{row_25['Cycle Sayısı']:.1f} EFC</span>
+                <span class="val-mono">{row_25['Döngü Sayısı (EFC)']:.1f} EFC</span>
             </div>
             <div style="font-size: 0.74rem; color: #94a3b8; margin-top: 0.4rem; font-family: var(--font-mono);">
                 Ort. Spread: <b style="color: #dfe2ee;">${row_25['Gerçekleşen Spread ($/MWh)']:.2f}/MWh</b> | Aktif: {row_25['Aktif Gün']} gün
@@ -982,10 +982,10 @@ with tab_yearly:
             "Brüt Kâr ($)": "${:,.2f}",
             "Yıpranma Maliyeti ($)": "${:,.2f}",
             "Net Kâr ($)": "${:,.2f}",
-            "Cycle Sayısı": "{:.1f}",
+            "Döngü Sayısı (EFC)": "{:.1f}",
             "Aktif Gün": "{:d}",
             "Pas Geçilen Gün": "{:d}",
-            "Cycle Başı Kâr ($)": "${:,.2f}",
+            "Döngü Başı Kâr ($)": "${:,.2f}",
             "Ort. Deşarj Fiyatı ($/MWh)": "${:.2f}",
             "Ort. Şarj Fiyatı ($/MWh)": "${:.2f}",
             "Gerçekleşen Spread ($/MWh)": "${:.2f}"
