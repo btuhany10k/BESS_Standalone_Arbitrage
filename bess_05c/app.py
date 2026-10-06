@@ -36,7 +36,8 @@ from src.charts import (
     build_monthly_financial_chart,
     build_monthly_cycles_chart,
     build_strategy_comparison_barchart,
-    build_yearly_comparison_chart
+    build_yearly_comparison_chart,
+    build_monthly_extra_cycle_benefit_chart
 )
 from src.ui_cards import (
     render_header_banner,
@@ -825,6 +826,16 @@ with tab_scenarios:
             xaxis=dict(gridcolor="rgba(255, 255, 255, 0.06)")
         )
         st.plotly_chart(fig_cum_comp, use_container_width=True)
+
+    # -------------------------------------------------------------------------
+    # Aylar Boyunca Ek Döngünün Faydası (Sade Çizgi Grafik)
+    # -------------------------------------------------------------------------
+    if not is_15_days and daily_10 is not None and daily_15 is not None:
+        st.markdown("<div style='margin-top: 1rem; margin-bottom: 0.35rem; font-size: 0.95rem; font-weight: 600; color: #ffffff;'>Aylar Boyunca Ek Döngünün Faydası (1.5 Döngü vs 1.0 Döngü Getiri Katkısı)</div>", unsafe_allow_html=True)
+        m_10 = aggregate_monthly_05c(daily_10, hourly_10)
+        m_15 = aggregate_monthly_05c(daily_15, hourly_15)
+        fig_extra_cycle = build_monthly_extra_cycle_benefit_chart(m_10, m_15)
+        st.plotly_chart(fig_extra_cycle, use_container_width=True)
 
     st.markdown("<div style='font-size: 0.95rem; font-weight: 600; color: #ffffff; margin-top: 1rem; margin-bottom: 0.5rem;'>Senaryo Karşılaştırma Matrisi Tablosu</div>", unsafe_allow_html=True)
     st.dataframe(

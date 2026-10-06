@@ -450,3 +450,69 @@ def build_yearly_comparison_chart(comp_df: pd.DataFrame) -> go.Figure:
         yaxis=dict(title="Tutar ($)", gridcolor="rgba(255, 255, 255, 0.06)", tickprefix="$")
     )
     return fig
+
+
+def build_monthly_extra_cycle_benefit_chart(
+    monthly_10: pd.DataFrame,
+    monthly_15: pd.DataFrame
+) -> go.Figure:
+    """
+    Aylar boyunca 1.5 döngü stratejisinin 1.0 döngüye kıyasla sağladığı
+    ek kâr / getiri farkını (Δ Net Kâr $) sade ve zarif bir çizgi grafikle gösterir.
+    """
+    df = pd.merge(
+        monthly_10[["month", "month_name", "net_profit"]].rename(columns={"net_profit": "profit_10"}),
+        monthly_15[["month", "net_profit"]].rename(columns={"net_profit": "profit_15"}),
+        on="month"
+    ).sort_values("month")
+
+    df["extra_profit"] = df["profit_15"] - df["profit_10"]
+
+    fig = go.Figure()
+
+    # Ek getiri alanı (Gradient/Soft Glow fill)
+    fig.add_trace(
+        go.Scatter(
+            x=df["month_name"],
+            y=df["extra_profit"],
+            mode="lines+markers",
+            name="Ek Döngü Getirisi ($)",
+            line=dict(color="#4edea3", width=3, shape="spline", smoothing=0.3),
+            marker=dict(
+                size=8,
+                color="#4edea3",
+                symbol="circle",
+                line=dict(color="#0a0e16", width=2)
+            ),
+            fill="tozeroy",
+            fillcolor="rgba(78, 222, 163, 0.12)",
+            text=[f"+${v:,.0f}" for v in df["extra_profit"]],
+            textposition="top center",
+            textfont=dict(color="#4edea3", size=10, family="JetBrains Mono, monospace"),
+            hovertemplate="<b>%{x}</b><br>Ek Döngü Net Kâr Katkısı: <b>+%{y:$,.2f}</b><extra></extra>"
+        )
+    )
+
+    fig.update_layout(
+        template="plotly_dark",
+        paper_bgcolor="rgba(24, 28, 36, 0.5)",
+        plot_bgcolor="rgba(15, 19, 28, 0.6)",
+        font=dict(color="#dfe2ee", family="Inter, sans-serif", size=11),
+        height=320,
+        margin=dict(l=20, r=20, t=20, b=25),
+        showlegend=False,
+        yaxis=dict(
+            title="Ek Getiri ($)",
+            gridcolor="rgba(255, 255, 255, 0.06)",
+            tickprefix="$",
+            zeroline=True,
+            zerolinecolor="rgba(255, 255, 255, 0.15)",
+            zerolinewidth=1
+        ),
+        xaxis=dict(
+            gridcolor="rgba(255, 255, 255, 0.06)",
+            tickfont=dict(size=10)
+        )
+    )
+    return fig
+
