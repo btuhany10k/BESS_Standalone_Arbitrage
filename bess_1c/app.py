@@ -24,8 +24,8 @@ from src.exporter import generate_bess_excel_report
 
 # Sayfa Konfigürasyonu
 st.set_page_config(
-    page_title="BESS Arbitraj Optimizasyonu | Fizibilite Paneli",
-    page_icon="⚡",
+    page_title="Standalone BESS Arbitraj Stratejisi | 1C Depolama",
+    page_icon="🔋",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -206,7 +206,7 @@ st.sidebar.info(
 )
 
 rte_percent = st.sidebar.slider(
-    "Çevrim Verimliliği (RTE %)",
+    "Döngü Verimliliği (RTE %)",
     min_value=70,
     max_value=98,
     value=85,
@@ -297,10 +297,10 @@ comp_df = pd.DataFrame([
         "Brüt Kâr ($)": kpis_2024["gross_profit"],
         "Yıpranma Maliyeti ($)": kpis_2024["total_degradation_cost"],
         "Net Kâr ($)": kpis_2024["net_profit"],
-        "Cycle Sayısı": kpis_2024["total_cycles"],
+        "Döngü Sayısı (EFC)": kpis_2024["total_cycles"],
         "Aktif Gün": kpis_2024["active_days"],
         "Pas Geçilen Gün": kpis_2024["passed_days"],
-        "Cycle Başı Kâr ($)": kpis_2024["profit_per_cycle"],
+        "Döngü Başı Net Kâr ($/Döngü)": kpis_2024["profit_per_cycle"],
         "Ort. Deşarj Fiyatı ($/MWh)": kpis_2024["avg_discharge_price"],
         "Ort. Şarj Fiyatı ($/MWh)": kpis_2024["avg_charge_price"],
         "Gerçekleşen Spread ($/MWh)": kpis_2024["realized_spread"],
@@ -312,10 +312,10 @@ comp_df = pd.DataFrame([
         "Brüt Kâr ($)": kpis_2025["gross_profit"],
         "Yıpranma Maliyeti ($)": kpis_2025["total_degradation_cost"],
         "Net Kâr ($)": kpis_2025["net_profit"],
-        "Cycle Sayısı": kpis_2025["total_cycles"],
+        "Döngü Sayısı (EFC)": kpis_2025["total_cycles"],
         "Aktif Gün": kpis_2025["active_days"],
         "Pas Geçilen Gün": kpis_2025["passed_days"],
-        "Cycle Başı Kâr ($)": kpis_2025["profit_per_cycle"],
+        "Döngü Başı Net Kâr ($/Döngü)": kpis_2025["profit_per_cycle"],
         "Ort. Deşarj Fiyatı ($/MWh)": kpis_2025["avg_discharge_price"],
         "Ort. Şarj Fiyatı ($/MWh)": kpis_2025["avg_charge_price"],
         "Gerçekleşen Spread ($/MWh)": kpis_2025["realized_spread"],
@@ -324,7 +324,7 @@ comp_df = pd.DataFrame([
 
 # --- ANA EKRAN ---
 strat_display_name = "Günde 2 Döngü (Çift Blok)" if strategy == "2_cycle" else "Günde 1 Döngü (Tek Blok)"
-st.markdown('<div class="main-title">⚡ BESS PTF Spread Arbitraj Optimizasyonu</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">🔋 Standalone BESS Arbitraj Stratejisi</div>', unsafe_allow_html=True)
 st.markdown(
     f'<div class="sub-title">EPİAŞ {selected_year} Yılı Saatlik Gerçek PTF ($/MWh) | {strat_display_name} | Başlangıç SoC: %{soc_start_pct} ➔ Bitiş SoC: %{soc_end_pct} | Yıpranma: ${degradation_cost:.1f}/MWh</div>',
     unsafe_allow_html=True
@@ -358,14 +358,14 @@ if degradation_cost > 0:
 
 cards.extend([
     f"""<div class="kpi-card">
-<div class="kpi-label">🔋 Toplam Yapılan Cycle</div>
+<div class="kpi-label">🔋 Toplam Yapılan Döngü</div>
 <div class="kpi-value kpi-cycle">{kpis['total_cycles']:,.0f}</div>
 <div class="kpi-sub">{kpis['active_days']} aktif / {kpis['passed_days']} pas geçilen gün</div>
 </div>""",
     f"""<div class="kpi-card">
-<div class="kpi-label">💎 Cycle Başı Net Kâr</div>
+<div class="kpi-label">💎 Döngü Başı Net Kâr</div>
 <div class="kpi-value kpi-profit">${kpis['profit_per_cycle']:,.2f}</div>
-<div class="kpi-sub">Net kâr / Toplam cycle</div>
+<div class="kpi-sub">Net kâr / Toplam döngü</div>
 </div>""",
     f"""<div class="kpi-card">
 <div class="kpi-label">🎯 Yıl Boyu Ortalama Fiyat Makası (Alış-Satış Farkı)</div>
@@ -518,10 +518,10 @@ with tab_daily:
             st.metric("Günlük Net Kâr", f"${day_summary['net_profit']:.2f}", sub_txt)
     with col_d3:
         if day_summary.get("is_passed", False):
-            st.metric("O Günkü Cycle", "0.00 EFC", f"Spread: ${day_summary['ptf_spread']:.1f}")
+            st.metric("O Günkü Döngü", "0.00 EFC", f"Spread: ${day_summary['ptf_spread']:.1f}")
         else:
             deg_sub = f"Yıpranma: -${day_summary['degradation_cost']:.1f}" if degradation_cost > 0 else f"Spread: ${day_summary['ptf_spread']:.1f}"
-            st.metric("O Günkü Cycle", f"{day_summary['cycles']:.2f} EFC", deg_sub)
+            st.metric("O Günkü Döngü", f"{day_summary['cycles']:.2f} EFC", deg_sub)
 
     # Eğer gün pas geçildiyse bilgilendirme kartı göster
     if day_summary.get("is_passed", False):
@@ -780,7 +780,7 @@ with tab_daily:
 # =========================================================================
 with tab_monthly:
     st.markdown("#### 📊 Aylık ve Yıllık Kırılım & 365 Günlük Excel Raporu")
-    st.caption("Aylık bazda gerçekleşen net arbitraj kârı, yapılan tam döngü sayısı, cycle başına üretilen kâr ve 365 günlük Excel dışa aktarım aracı.")
+    st.caption("Aylık bazda gerçekleşen net arbitraj kârı, yapılan tam döngü sayısı, döngü başına üretilen kâr ve 365 günlük Excel dışa aktarım aracı.")
 
     # 365 Günlük Kapsamlı Excel Rapor Kartı
     excel_card_html = (
@@ -834,7 +834,7 @@ with tab_monthly:
     col_m1, col_m2, col_m3 = st.columns(3)
 
     with col_m1:
-        # 1. Aylık Net Kâr & Cycle Grafiği
+        # 1. Aylık Net Kâr & Döngü Grafiği
         fig_monthly = make_subplots(specs=[[{"secondary_y": True}]])
 
         fig_monthly.add_trace(
@@ -864,17 +864,17 @@ with tab_monthly:
             go.Scatter(
                 x=monthly_df["month_name"],
                 y=monthly_df["cycles"],
-                name="Cycle",
+                name="Döngü",
                 mode="lines+markers",
                 marker=dict(color="#38bdf8", size=6),
                 line=dict(color="#38bdf8", width=2),
-                hovertemplate="%{x}<br>Cycle: <b>%{y:.0f}</b><extra></extra>"
+                hovertemplate="%{x}<br>Döngü: <b>%{y:.1f}</b><extra></extra>"
             ),
             secondary_y=True
         )
 
         fig_monthly.update_layout(
-            title=dict(text="Aylık Net Kâr ($) ve Cycle", font=dict(size=12.5, color="#f8fafc")),
+            title=dict(text="Aylık Net Kâr ($) ve Döngü", font=dict(size=12.5, color="#f8fafc")),
             height=315,
             margin=dict(l=35, r=35, t=45, b=25),
             plot_bgcolor="rgba(0,0,0,0)",
@@ -883,29 +883,29 @@ with tab_monthly:
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=9.5, color="#e2e8f0")),
             xaxis=dict(gridcolor="rgba(148, 163, 184, 0.12)", tickfont=dict(color="#94a3b8", size=9)),
             yaxis=dict(title="Dolar ($)", gridcolor="rgba(148, 163, 184, 0.12)", tickfont=dict(color="#94a3b8", size=9), title_font=dict(color="#cbd5e1", size=10)),
-            yaxis2=dict(title="Cycle", overlaying="y", side="right", showgrid=False, tickfont=dict(color="#38bdf8", size=9), title_font=dict(color="#38bdf8", size=10))
+            yaxis2=dict(title="Döngü", overlaying="y", side="right", showgrid=False, tickfont=dict(color="#38bdf8", size=9), title_font=dict(color="#38bdf8", size=10))
         )
         st.plotly_chart(fig_monthly, width="stretch")
 
     with col_m2:
-        # 2. Aylık Cycle Başına Kâr ($/Cycle)
+        # 2. Aylık Döngü Başına Net Kâr ($/Döngü)
         fig_per_cycle = go.Figure()
         fig_per_cycle.add_trace(
             go.Bar(
                 x=monthly_df["month_name"],
                 y=monthly_df["profit_per_cycle"],
                 marker=dict(color="#38bdf8", opacity=0.88, line=dict(color="#0284c7", width=1)),
-                hovertemplate="%{x}<br>Cycle Başı Kâr: <b>$%{y:.2f}</b><extra></extra>"
+                hovertemplate="%{x}<br>Döngü Başı Kâr: <b>$%{y:.2f}</b><extra></extra>"
             )
         )
         fig_per_cycle.update_layout(
-            title=dict(text="Aylık Cycle Başı Net Kâr ($/Cycle)", font=dict(size=12.5, color="#f8fafc")),
+            title=dict(text="Aylık Döngü Başı Net Kâr ($/Döngü)", font=dict(size=12.5, color="#f8fafc")),
             height=315,
             margin=dict(l=35, r=25, t=45, b=25),
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
             xaxis=dict(gridcolor="rgba(148, 163, 184, 0.12)", tickfont=dict(color="#94a3b8", size=9)),
-            yaxis=dict(title="$/Cycle", gridcolor="rgba(148, 163, 184, 0.12)", tickfont=dict(color="#94a3b8", size=9), title_font=dict(color="#cbd5e1", size=10)),
+            yaxis=dict(title="$/Döngü", gridcolor="rgba(148, 163, 184, 0.12)", tickfont=dict(color="#94a3b8", size=9), title_font=dict(color="#cbd5e1", size=10)),
         )
         st.plotly_chart(fig_per_cycle, width="stretch")
 
@@ -913,7 +913,6 @@ with tab_monthly:
         # 3. Aylık Ortalama PTF ve Günlük PTF Spread (Makas) Grafiği
         fig_spread_ptf = make_subplots(specs=[[{"secondary_y": True}]])
 
-        # Bar Grafiği: Aylık Ortalama Günlük PTF Spread ($/MWh)
         fig_spread_ptf.add_trace(
             go.Bar(
                 x=monthly_df["month_name"],
@@ -929,7 +928,6 @@ with tab_monthly:
             secondary_y=False
         )
 
-        # Çizgi Grafiği: Aylık Ortalama PTF ($/MWh)
         fig_spread_ptf.add_trace(
             go.Scatter(
                 x=monthly_df["month_name"],
@@ -988,36 +986,83 @@ with tab_monthly:
                 rangemode="tozero"
             )
         )
-
         st.plotly_chart(fig_spread_ptf, width="stretch")
 
+    # 4. Aylar Boyunca Ek Döngünün Faydası (Sade Çizgi Grafik)
+    st.markdown("##### 📈 Aylar Boyunca Ek Döngünün Getiri Faydası (2. Döngü vs 1 Döngü)")
+    st.caption("Günde 2 döngü stratejisinin tek döngüye kıyasla sağladığı aylık ek net kazanç ($) katkısı.")
+
+    _, _, _, m_1c = calculate_optimization(selected_year, power_mw, c_rate, rte, float(soc_start_pct), float(soc_end_pct), float(degradation_cost), "1_cycle")
+    _, _, _, m_2c = calculate_optimization(selected_year, power_mw, c_rate, rte, float(soc_start_pct), float(soc_end_pct), float(degradation_cost), "2_cycle")
+
+    if m_1c is not None and m_2c is not None:
+        diff_benefit = m_2c["net_profit"].values - m_1c["net_profit"].values
+        fig_benefit = go.Figure()
+        fig_benefit.add_trace(
+            go.Scatter(
+                x=monthly_df["month_name"],
+                y=diff_benefit,
+                mode="lines+markers+text",
+                name="Ek Döngü Getirisi ($)",
+                line=dict(color="#10b981", width=3, shape="spline", smoothing=0.3),
+                marker=dict(size=8, color="#10b981", symbol="circle", line=dict(color="#0a0e16", width=2)),
+                fill="tozeroy",
+                fillcolor="rgba(16, 185, 129, 0.12)",
+                text=[f"+${v:,.0f}" if v > 0 else f"${v:,.0f}" for v in diff_benefit],
+                textposition="top center",
+                textfont=dict(color="#10b981", size=10, family="monospace"),
+                hovertemplate="<b>%{x}</b><br>Ek Döngü Faydası: <b>$%{y:,.2f}</b><extra></extra>"
+            )
+        )
+        fig_benefit.update_layout(
+            template="plotly_dark",
+            height=280,
+            margin=dict(l=35, r=35, t=25, b=25),
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            showlegend=False,
+            xaxis=dict(gridcolor="rgba(148, 163, 184, 0.12)", tickfont=dict(color="#94a3b8", size=9.5)),
+            yaxis=dict(
+                title="Ek Getiri ($)",
+                tickprefix="$",
+                gridcolor="rgba(148, 163, 184, 0.12)",
+                tickfont=dict(color="#94a3b8", size=9),
+                title_font=dict(color="#cbd5e1", size=10),
+                zeroline=True,
+                zerolinecolor="rgba(255, 255, 255, 0.2)"
+            )
+        )
+        st.plotly_chart(fig_benefit, width="stretch")
+
     # Aylık Tablo
-    st.markdown("##### 📑 Aylık Özet Performans Tablosu")
+    st.markdown("##### 📋 Aylık Özet Performans Tablosu")
     display_monthly = monthly_df[[
-        "month_name", "discharge_revenue", "charge_cost", "gross_profit", "degradation_cost",
+        "month", "month_name", "discharge_revenue", "charge_cost", "gross_profit", "degradation_cost",
         "net_profit", "cycles", "active_days", "passed_days", "profit_per_cycle", "avg_spread", "avg_ptf"
     ]].copy()
     display_monthly.columns = [
-        "Ay", "Deşarj Geliri ($)", "Şarj Maliyeti ($)", "Brüt Kâr ($)", "Yıpranma Maliyeti ($)",
-        "Net Arbitraj Kârı ($)", "Toplam Cycle", "Aktif Gün", "Pas Geçilen Gün", "Cycle Başı Kâr ($/Cycle)",
+        "Ay No", "Ay", "Deşarj Geliri ($)", "Şarj Maliyeti ($)", "Brüt Kâr ($)", "Yıpranma Maliyeti ($)",
+        "Net Arbitraj Kârı ($)", "Toplam Döngü (EFC)", "Aktif Gün", "Pas Geçilen Gün", "Döngü Başı Net Kâr ($/Döngü)",
         "Ort. Günlük Spread ($/MWh)", "Aylık Ort. PTF ($/MWh)"
     ]
 
     st.dataframe(
         display_monthly.style.format({
+            "Ay No": "{:.0f}",
             "Deşarj Geliri ($)": "${:,.2f}",
             "Şarj Maliyeti ($)": "${:,.2f}",
             "Brüt Kâr ($)": "${:,.2f}",
             "Yıpranma Maliyeti ($)": "${:,.2f}",
             "Net Arbitraj Kârı ($)": "${:,.2f}",
-            "Toplam Cycle": "{:.0f}",
+            "Toplam Döngü (EFC)": "{:.1f}",
             "Aktif Gün": "{:.0f}",
             "Pas Geçilen Gün": "{:.0f}",
-            "Cycle Başı Kâr ($/Cycle)": "${:.2f}",
+            "Döngü Başı Net Kâr ($/Döngü)": "${:.2f}",
             "Ort. Günlük Spread ($/MWh)": "${:.2f}",
             "Aylık Ort. PTF ($/MWh)": "${:.2f}",
         }),
-        width="stretch"
+        width="stretch",
+        hide_index=True
     )
 
 # =========================================================================
@@ -1039,16 +1084,16 @@ with tab_comparison:
     with col_c2:
         diff_cycles = kpis_2025['total_cycles'] - kpis_2024['total_cycles']
         st.metric(
-            "2025 Toplam Cycle",
+            "2025 Toplam Döngü",
             f"{kpis_2025['total_cycles']:.0f}",
-            delta=f"{diff_cycles:+.0f} Cycle"
+            delta=f"{diff_cycles:+.0f} Döngü"
         )
     with col_c3:
         diff_per_cy = kpis_2025['profit_per_cycle'] - kpis_2024['profit_per_cycle']
         st.metric(
-            "2025 Cycle Başı Net Kâr",
+            "2025 Döngü Başı Net Kâr",
             f"${kpis_2025['profit_per_cycle']:.2f}",
-            delta=f"${diff_per_cy:+.2f} / Cycle"
+            delta=f"${diff_per_cy:+.2f} / Döngü"
         )
 
     st.markdown("##### 📋 Yıllık Karşılaştırma Metrikleri Tablosu")
@@ -1059,15 +1104,16 @@ with tab_comparison:
             "Brüt Kâr ($)": "${:,.2f}",
             "Yıpranma Maliyeti ($)": "${:,.2f}",
             "Net Kâr ($)": "${:,.2f}",
-            "Cycle Sayısı": "{:.0f}",
+            "Döngü Sayısı (EFC)": "{:.0f}",
             "Aktif Gün": "{:.0f}",
             "Pas Geçilen Gün": "{:.0f}",
-            "Cycle Başı Kâr ($)": "${:.2f}",
+            "Döngü Başı Net Kâr ($/Döngü)": "${:.2f}",
             "Ort. Deşarj Fiyatı ($/MWh)": "${:.2f}",
             "Ort. Şarj Fiyatı ($/MWh)": "${:.2f}",
             "Gerçekleşen Spread ($/MWh)": "${:.2f}",
         }),
-        width="stretch"
+        width="stretch",
+        hide_index=True
     )
 
     # 2024 vs 2025 Aylık Net Kâr Karşılaştırma Grafiği
