@@ -1,36 +1,38 @@
-# BESS Standalone Arbitrage Platform (lucid-franklin)
-## Batarya Enerji Depolama Sistemleri (BESS) Arbitraj & Fizibilite Çözümleri
+# BESS Standalone Arbitrage Platform
+## Battery Energy Storage Systems (BESS) Arbitrage & Feasibility Dashboard
 
-Bu depo (`lucid-franklin`), EPİAŞ Gün Öncesi Piyasası (PTF) verilerini kullanarak şebeke ölçeğinde batarya arbitrajı gerçekleştiren **iki bağımsız projeyi** ayrı klasörlerde barındırmaktadır:
-
----
-
-### 📁 1. `bess_05c/` - Standalone BESS Arbitraj Stratejisi (0.5C / 2-Saat Depolama) [Aktif]
-- **Yapı:** 0.5C / 2 Saatlik Depolama (örn. 50 MW / 100 MWh)
-- **Matematiksel Motor:** SciPy HiGHS Simplex sürekli doğrusal optimizasyon
-- **Özellikler:** Değişken güç modülasyonu ($0 \le P \le P_{max}$), 1.0 Döngü vs. 1.5 Döngü senaryo karşılaştırma matrisi, dinamik hücre yıpranması
-- **Tasarım:** Apple Cupertino & Google Material 3 koyu slate arayüz, sıfır emoji, vektör SVG batarya ikonları
-- **Yerel Port:** `http://localhost:8502`
-- **Başlatıcı:** `run_bess_05c.bat` (veya `bess_05c/run_app.bat`)
+This repository provides simulation, optimization, and feasibility analytics for utility-scale battery energy storage systems (BESS) participating in Day-Ahead electricity markets.
 
 ---
 
-### 📁 2. `bess_1c/` - 1C Tam Blok Arbitraj & Sezgisel Optimizasyon [Eski Proje]
-- **Yapı:** 1C / 1 Saatlik Depolama (örn. 1 MW / 1 MWh veya 50 MW / 50 MWh)
-- **Model:** Tam blok ikili (on/off) şarj ve deşarj eşleştirme sezgiselleri (1-Döngü ve 2-Döngü)
-- **Yerel Port:** `http://localhost:8501`
-- **Başlatıcı:** `run_bess_1c.bat` (veya `bess_1c/run_app.bat`)
+### 🔋 Standalone BESS Arbitrage Strategy (1C Storage)
+- **Configuration:** 1C / 1-Hour Storage Duration (e.g. 50 MW / 50 MWh)
+- **Mathematical Optimization Engine:** Full-block economic dispatch and dual-cycling heuristic optimizer
+- **Features:**
+  - 1-Cycle (Single Block) and Up to 2-Cycles (Dual Block) dispatch strategies
+  - Operator State of Charge (SoC) management (day-start & day-end target constraints)
+  - Cell degradation cost & efficiency loss economic filtering (standby when unprofitable)
+  - 24-hour interactive dispatch profile (price, power, and SoC trajectory)
+  - Monthly and annual financial breakdown tables and charts
+  - Incremental monthly benefit curve for additional cycling
+  - Multi-year (2024 vs 2025) comparative performance benchmarking
+  - Comprehensive 5-sheet audit-ready Excel report export (`.xlsx`)
+- **Web App:** Deployed on Streamlit Cloud
 
 ---
 
-### 📊 Ortak Veri Seti (`data/`)
-Her iki proje de ana dizindeki `data/` klasöründeki EPİAŞ PTF verilerini paylaşır:
-- `data/PTF2024.csv`: 2024 yılı saatlik PTF ($/MWh) verisi (8.784 satır, artık yıl)
-- `data/PTF2025.csv`: 2025 yılı saatlik PTF ($/MWh) verisi (8.760 satır, tam yıl)
+### 📊 Dataset (`data/`)
+The platform uses real hourly Day-Ahead market price ($/MWh) datasets:
+- `data/PTF2024.csv`: 2024 hourly prices (8,784 records, leap year)
+- `data/PTF2025.csv`: 2025 hourly prices (8,760 records, full year)
 
 ---
 
-### 🚀 Hızlı Başlatma (Windows)
-1. **0.5C LP Panelini Başlatmak İçin:** Çift tıklayın: **`run_bess_05c.bat`** (Port 8502)
-2. **1C Blok Panelini Başlatmak İçin:** Çift tıklayın: **`run_bess_1c.bat`** (Port 8501)
-3. **Seçim Menüsü İçin:** Çift tıklayın: **`run_app.bat`**
+### 🚀 Quick Start (Local Run)
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Launch the Streamlit application
+streamlit run app.py
+```

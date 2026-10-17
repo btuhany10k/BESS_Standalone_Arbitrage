@@ -1,8 +1,7 @@
 """
-BESS 1C Arbitraj Optimizasyon Motoru
-Günün en kârlı şarj ve deşarj saatlerini tespit eder.
-İşletmecinin belirlediği gün başlangıç ve gün sonu SoC (%) seviyelerine göre
-arbitraj simülasyonunu gerçekleştirir.
+BESS 1C Arbitrage Optimization Engine
+Identifies the most profitable daily charge and discharge windows.
+Simulates arbitrage dispatch based on operator day-start and day-end SoC (%) constraints.
 """
 from __future__ import annotations
 
@@ -14,23 +13,23 @@ import pandas as pd
 
 @dataclass
 class BESSConfig:
-    """BESS Sistem ve İşletme Parametreleri"""
-    power_mw: float = 1.0           # Nominal Güç (MW)
-    c_rate: float = 1.0             # C-Rate (1C -> 1 Saat şarj / 1 Saat deşarj)
-    rte: float = 0.85               # Round-Trip Efficiency (Verimlilik, örn: 0.85 = %85)
-    soc_start_pct: float = 0.0      # Gün Başlangıcı SoC Seviyesi (%)
-    soc_end_pct: float = 0.0        # Gün Sonu Hedef SoC Seviyesi (%)
-    degradation_cost: float = 0.0   # Yıpranma Maliyeti ($/MWh deşarj veya $/Cycle kapasite)
-    strategy: str = "1_cycle"       # "1_cycle" (Tek Blok) veya "2_cycle" (Çift Blok)
+    """BESS System and Operational Parameters"""
+    power_mw: float = 1.0           # Nominal Power (MW)
+    c_rate: float = 1.0             # C-Rate (1C -> 1-Hour full charge / 1-Hour full discharge)
+    rte: float = 0.85               # AC-AC Round-Trip Efficiency (e.g. 0.85 = 85%)
+    soc_start_pct: float = 0.0      # Day-Start Initial SoC Level (%)
+    soc_end_pct: float = 0.0        # Day-End Target SoC Level (%)
+    degradation_cost: float = 0.0   # Degradation Cost ($/MWh throughput)
+    strategy: str = "1_cycle"       # "1_cycle" (Single Block) or "2_cycle" (Dual Block)
 
     @property
     def capacity_mwh(self) -> float:
-        """Kapasite = Güç / C-Rate (MWh)"""
+        """Capacity = Power / C-Rate (MWh)"""
         return self.power_mw / self.c_rate
 
     @property
     def duration_hours(self) -> float:
-        """Deşarj süresi (saat) = 1 / C-Rate"""
+        """Discharge Duration (hours) = 1 / C-Rate"""
         return 1.0 / self.c_rate
 
 
@@ -39,20 +38,20 @@ def optimize_single_day(
     config: BESSConfig
 ) -> Dict[str, Any]:
     """
-    1C ve İşletmeci SoC Başlangıç/Bitiş Kurallı Arbitraj Optimizasyonu.
+    1C Full-Block Economic Dispatch with Operator Start/End SoC Rules.
     
-    1 Döngü (Tek Blok) Mantığı:
-      - Güne soc_start_pct seviyesinde başlanır (soc_start = soc_start_pct/100 * E_max).
-      - Günün en yüksek net spread'ine sahip (ch1, dis1) çifti bulunur (ch1 < dis1).
-      - Net Kâr <= 0 ise batarya gün boyu bekletilir (Pas Geçilir: 0 MW, 0 Cycle, $0 Maliyet, $0 Kâr).
+    1-Cycle (Single Block) Logic:
+      - Starts at soc_start_pct (soc_start = soc_start_pct/100 * E_max).
+      - Finds the (ch1, dis1) pair with maximum net spread (ch1 < dis1).
+      - If Net Profit <= $0, system stands by (Idle: 0 MW, 0 Cycles, $0 Cost, $0 Profit).
     
-    2 Döngü (Çift Blok) Mantığı:
-      - 1. döngü (en yüksek kârlı birincil döngü) korunur.
-      - 1. döngü saatlerinin kesinlikle dışındaki serbest pencerelerde 2. döngü aranır:
-          * Pencere A (Önce): 0 <= ch2 < dis2 < ch1
-          * Pencere B (Sonra): dis1 < ch2 < dis2 <= 23
-      - 2. döngü sadece Net Kârı > 0 ise devreye alınır; kârsızsa 1 döngüde kalınır.
-      - Gün içi olaylar kronolojik sıraya göre 'Şarj 1', 'Deşarj 1', 'Şarj 2', 'Deşarj 2' olarak etiketlenir.
+    2-Cycle (Dual Block) Logic:
+      - Preserves 1st cycle (primary highest-margin cycle).
+      - Searches non-overlapping windows for a secondary 2nd cycle:
+          * Window A (Before): 0 <= ch2 < dis2 < ch1
+          * Window B (After): dis1 < ch2 < dis2 <= 23
+      - 2nd cycle is only added if incremental Net Profit > $0; otherwise stays at 1 cycle.
+      - Dispatches are chronologically labelled as 'Charge 1', 'Discharge 1', 'Charge 2', 'Discharge 2'.
     """
     T = len(prices)
     E_max = config.capacity_mwh
@@ -354,7 +353,7 @@ def optimize_year(df: pd.DataFrame, config: BESSConfig) -> Tuple[pd.DataFrame, p
         cost_arr = np.zeros(24)
         rev_arr = np.zeros(24)
         deg_arr = np.zeros(24)
-        action_labels = ["Bekleme (Standby)"] * 24 if not res["is_passed"] else ["Pas Geçildi"] * 24
+        action_labels = ["Standby (Idle)"] * 24 if not res["is_passed"] else ["Standby (Unprofitable)"] * 24
         cycle_nums = [None] * 24
 
         ch1_h = res["ch1_hour"]
@@ -368,11 +367,11 @@ def optimize_year(df: pd.DataFrame, config: BESSConfig) -> Tuple[pd.DataFrame, p
             cycle_nums[h] = c_num
             if ev["type"] == "charge":
                 cost_arr[h] = ev["cost"]
-                action_labels[h] = f"Şarj {c_num}"
+                action_labels[h] = f"Charge {c_num}"
             elif ev["type"] == "discharge":
                 rev_arr[h] = ev["rev"]
                 deg_arr[h] = ev["deg"]
-                action_labels[h] = f"Deşarj {c_num}"
+                action_labels[h] = f"Discharge {c_num}"
 
         prof_arr = rev_arr - cost_arr - deg_arr
 

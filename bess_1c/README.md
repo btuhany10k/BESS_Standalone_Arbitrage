@@ -1,18 +1,38 @@
-# BESS 1C Arbitraj Optimizasyonu & Fizibilite Dashboard
-## 1 Saatlik Depolama & Tam Blok Sezgisel Arbitraj
+# BESS Standalone Arbitrage Platform
+## Battery Energy Storage Systems (BESS) Arbitrage & Feasibility Dashboard
 
-Bu klasör, 1C (1 Saatlik Depolama, örn. 1 MW / 1 MWh veya 50 MW / 50 MWh) şebeke ölçeğindeki BESS projeleri için tam blok ikili şarj/deşarj arbitraj modelini içerir.
+This repository provides simulation, optimization, and feasibility analytics for utility-scale battery energy storage systems (BESS) participating in Day-Ahead electricity markets.
 
-### Temel Özellikler
-- **Tam Blok Arbitraj:** Günde 1 veya 2 tam döngü halinde günün en ucuz ve en pahalı saatlerini eşleştiren sezgisel kural tabanlı model.
-- **İşletmeci SoC Yönetimi:** Başlangıç ve gün sonu rezerv SoC sınırları.
-- **Yıpranma Maliyeti & Pas Geçme:** Arbitraj kârı yıpranma maliyetini kurtarmadığında bataryayı bekleten (idle) dinamik koruma.
-- **Excel Raporu:** 5 sekmeli yıllık ve saatlik nakit akışı tablosu.
+---
 
-### Çalıştırma
+### 🔋 Standalone BESS Arbitrage Strategy (1C Storage)
+- **Configuration:** 1C / 1-Hour Storage Duration (e.g. 50 MW / 50 MWh)
+- **Mathematical Optimization Engine:** Full-block economic dispatch and dual-cycling heuristic optimizer
+- **Features:**
+  - 1-Cycle (Single Block) and Up to 2-Cycles (Dual Block) dispatch strategies
+  - Operator State of Charge (SoC) management (day-start & day-end target constraints)
+  - Cell degradation cost & efficiency loss economic filtering (standby when unprofitable)
+  - 24-hour interactive dispatch profile (price, power, and SoC trajectory)
+  - Monthly and annual financial breakdown tables and charts
+  - Incremental monthly benefit curve for additional cycling
+  - Multi-year (2024 vs 2025) comparative performance benchmarking
+  - Comprehensive 5-sheet audit-ready Excel report export (`.xlsx`)
+- **Web App:** Deployed on Streamlit Cloud
+
+---
+
+### 📊 Dataset (`data/`)
+The platform uses real hourly Day-Ahead market price ($/MWh) datasets:
+- `data/PTF2024.csv`: 2024 hourly prices (8,784 records, leap year)
+- `data/PTF2025.csv`: 2025 hourly prices (8,760 records, full year)
+
+---
+
+### 🚀 Quick Start (Local Run)
 ```bash
-run_app.bat
-# veya terminalden:
-streamlit run app.py --server.port 8501
+# Install dependencies
+pip install -r requirements.txt
+
+# Launch the Streamlit application
+streamlit run app.py
 ```
-Tarayıcı: `http://localhost:8501`

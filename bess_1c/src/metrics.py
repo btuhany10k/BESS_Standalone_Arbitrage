@@ -1,6 +1,6 @@
 """
-BESS Fizibilite ve KPI Metrik Hesaplayıcı
-Yıllık, aylık ve günlük metrikleri, döngü istatistiklerini ve LinkedIn özetini hazırlar.
+BESS Feasibility and KPI Metrics Calculator
+Computes annual, monthly, and daily metrics, cycling statistics, and executive summaries.
 """
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import pandas as pd
 
 
 def compute_kpis(daily_df: pd.DataFrame, config_info: Dict[str, Any]) -> Dict[str, Any]:
-    """Yıllık genel KPI özetini hesaplar."""
+    """Computes overall annual KPI summary."""
     total_revenue = float(daily_df["discharge_revenue"].sum())
     total_cost = float(daily_df["charge_cost"].sum())
     total_degradation_cost = float(daily_df["degradation_cost"].sum()) if "degradation_cost" in daily_df.columns else 0.0
@@ -22,7 +22,7 @@ def compute_kpis(daily_df: pd.DataFrame, config_info: Dict[str, Any]) -> Dict[st
 
     profit_per_cycle = (net_profit / total_cycles) if total_cycles > 0.01 else 0.0
 
-    # Ağırlıklı ortalama şarj ve deşarj fiyatı
+    # Volume-weighted average charge and discharge prices
     avg_discharge_price = (total_revenue / total_discharged_mwh) if total_discharged_mwh > 0 else 0.0
     avg_charge_price = (total_cost / total_charged_mwh) if total_charged_mwh > 0 else 0.0
     realized_spread = avg_discharge_price - avg_charge_price
@@ -62,10 +62,10 @@ def compute_kpis(daily_df: pd.DataFrame, config_info: Dict[str, Any]) -> Dict[st
 
 
 def compute_monthly_breakdown(daily_df: pd.DataFrame, capacity_mwh: float) -> pd.DataFrame:
-    """Aylık kırılım tablosunu üretir."""
+    """Computes monthly financial and operational breakdown table."""
     month_names = {
-        1: "Ocak", 2: "Şubat", 3: "Mart", 4: "Nisan", 5: "Mayıs", 6: "Haziran",
-        7: "Temmuz", 8: "Ağustos", 9: "Eylül", 10: "Ekim", 11: "Kasım", 12: "Aralık"
+        1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June",
+        7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"
     }
 
     agg_dict = {
@@ -86,7 +86,6 @@ def compute_monthly_breakdown(daily_df: pd.DataFrame, capacity_mwh: float) -> pd
 
     monthly = daily_df.groupby("month").agg(agg_dict).reset_index()
 
-    # Aktif ve pas geçilen gün sayıları
     active_days_per_month = daily_df[daily_df["cycles"] > 0.01].groupby("month")["date"].count()
     total_days_per_month = daily_df.groupby("month")["date"].count()
 
@@ -117,7 +116,7 @@ def compute_monthly_breakdown(daily_df: pd.DataFrame, capacity_mwh: float) -> pd
 
 
 def generate_linkedin_summary(year: int, kpis: Dict[str, Any]) -> str:
-    """LinkedIn gönderisi için temiz, profesyonel bir özet metni oluşturur."""
+    """Generates a clean, professional executive summary formatted for reports and executive sharing."""
     p_mw = kpis["power_mw"]
     cap_mwh = kpis["capacity_mwh"]
     c_rate = kpis["c_rate"]
@@ -127,37 +126,37 @@ def generate_linkedin_summary(year: int, kpis: Dict[str, Any]) -> str:
     gross_prof = kpis.get("gross_profit", kpis["net_profit"])
     passed_days = kpis.get("passed_days", 0)
 
-    strat_text = "Günde 2 Döngüye Kadar Arbitraj (Çift Blok)" if kpis.get("strategy") == "2_cycle" else "1C Arbitraj (Günde En Kârlı 1 Şarj / 1 Deşarj)"
+    strat_text = "Up to 2 Cycles per Day (Dual Block)" if kpis.get("strategy") == "2_cycle" else "1C Arbitrage (Single Block / 1 Cycle per Day)"
 
     deg_line = ""
     if deg_unit > 0:
-        deg_line = f"• 🛠️ Yıpranma Maliyeti Parametresi: ${deg_unit:.1f}/MWh (Toplam: ${deg_total:,.2f})\n"
+        deg_line = f"• 🛠️ Battery Degradation Cost: ${deg_unit:.1f}/MWh (Total: ${deg_total:,.2f})\n"
 
-    summary = f"""⚡ **BESS (Batarya Enerji Depolama) Arbitraj Fizibilite Analizi — {year} Yılı Gerçek PTF Sonuçları**
+    summary = f"""⚡ **BESS (Battery Energy Storage System) Arbitrage Feasibility Analysis — {year} Real Market Results**
 
-📌 **Sistem Konfigürasyonu:**
-• Batarya Gücü: {p_mw:,.1f} MW
-• Depolama Kapasitesi: {cap_mwh:,.1f} MWh ({c_rate:.1f}C)
-• Döngü Verimliliği (RTE): %{rte_pct:.0f}
-• Operasyon Stratejisi: {strat_text}
+📌 **System Configuration:**
+• Battery Power: {p_mw:,.1f} MW
+• Storage Capacity: {cap_mwh:,.1f} MWh ({c_rate:.1f}C)
+• Round-Trip Efficiency (RTE): %{rte_pct:.0f}
+• Operational Strategy: {strat_text}
 {deg_line}
-📊 **{year} Yılı Yıllık Arbitraj Performansı:**
-• 🟢 Toplam Deşarj Geliri: ${kpis['total_revenue']:,.2f}
-• 🔴 Toplam Şarj Maliyeti: ${kpis['total_cost']:,.2f}
-• 📈 Brüt Arbitraj Kârı: ${gross_prof:,.2f}
-• 🛠️ Toplam Yıpranma Maliyeti: ${deg_total:,.2f}
-• 💰 **Net Arbitraj Kârı:** **${kpis['net_profit']:,.2f}**
-• 🔋 Toplam Yapılan Döngü: {kpis['total_cycles']:,.1f} Döngü (EFC)
-• 💎 **Döngü Başı Net Kâr:** **${kpis['profit_per_cycle']:,.2f} / Döngü**
-• 📈 Ağırlıklı Ort. Deşarj Fiyatı: ${kpis['avg_discharge_price']:,.2f} / MWh
-• 📉 Ağırlıklı Ort. Şarj Fiyatı: ${kpis['avg_charge_price']:,.2f} / MWh
-• 🎯 Gerçekleşen Net Fiyat Spreadi: ${kpis['realized_spread']:,.2f} / MWh
-• ⏱️ Aktif Çalışılan Gün: {kpis['active_days']} / {kpis['total_days']} gün
-• 🛡️ Kârsız Olduğu İçin Pas Geçilen Gün: {passed_days} gün
+📊 **{year} Annual Arbitrage Performance:**
+• 🟢 Total Discharge Revenue: ${kpis['total_revenue']:,.2f}
+• 🔴 Total Charge Cost: ${kpis['total_cost']:,.2f}
+• 📈 Gross Arbitrage Profit: ${gross_prof:,.2f}
+• 🛠️ Total Degradation Cost: ${deg_total:,.2f}
+• 💰 **Net Arbitrage Profit:** **${kpis['net_profit']:,.2f}**
+• 🔋 Total Equivalent Full Cycles (EFC): {kpis['total_cycles']:,.1f} Cycles
+• 💎 **Net Profit per Cycle:** **${kpis['profit_per_cycle']:,.2f} / Cycle**
+• 📈 Volume-Weighted Avg. Discharge Price: ${kpis['avg_discharge_price']:,.2f} / MWh
+• 📉 Volume-Weighted Avg. Charge Price: ${kpis['avg_charge_price']:,.2f} / MWh
+• 🎯 Annual Realized Price Spread: ${kpis['realized_spread']:,.2f} / MWh
+• ⏱️ Active Operational Days: {kpis['active_days']} / {kpis['total_days']} days
+• 🛡️ Standby Days (Unprofitable / Preserved): {passed_days} days
 
-💡 **Çıkarım:**
-Fiyat spreadinin şarj ve yıpranma maliyetini karşılamadığı negatif günlerde batarya pas geçilerek (çalıştırılmayarak) sermaye korunmuş, kârlı günlerde arbitraj döngüsü ile döngü başına ortalama ${kpis['profit_per_cycle']:.2f} net kâr elde edilmiştir.
+💡 **Key Takeaway:**
+On negative-margin days where price spread does not clear charging efficiency losses and degradation costs, the battery remains on standby to protect capital and cell longevity. On profitable days, disciplined cycling achieves an average net profit of ${kpis['profit_per_cycle']:.2f} per equivalent full cycle.
 
-#BESS #EnerjiDepolama #PTF #EPİAŞ #Arbitraj #YenilenebilirEnerji #BatteryStorage #EnergyArbitrage
+#BESS #BatteryStorage #EnergyArbitrage #DayAheadMarket #CleanEnergy #PowerMarkets #EnergyEconomics
 """
     return summary
